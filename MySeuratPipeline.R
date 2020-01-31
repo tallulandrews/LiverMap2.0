@@ -1,7 +1,6 @@
 my_metadata_table <- read.table("Metadata20LiverMapPlusParams.csv", sep=",", header=T, stringsAsFactors=FALSE);
 
-dataset_row = 21;
-#for(dataset_row in 9:20) {
+for(dataset_row in 1:21) {
 
 set.seed(my_metadata_table$Seed[dataset_row])
 name <- my_metadata_table$Name[dataset_row]
@@ -12,7 +11,7 @@ nc_filter <- my_metadata_table$nCellfilter[dataset_row]
 nhvg <- my_metadata_table$nHVG[dataset_row]
 npcs <- my_metadata_table$nPCs[dataset_row]
 nkNN <- my_metadata_table$kNN[dataset_row]
-res <- 0.5
+res <- 5
 
 
 require(dplyr)
@@ -38,12 +37,13 @@ ElbowPlot(myseur)
 myseur <- FindNeighbors(myseur, dims = 1:npcs)
 myseur <- FindClusters(myseur, resolution = res, k.param=nkNN)
 myseur <- RunTSNE(myseur, dims = 1:npcs)
+myseur <- RunUMAP(myseur, dims = 1:npcs, parallel=FALSE)
 png(paste(name, "_default_tsne.png", sep=""), width=6, height=6, units="in", res=100)
 DimPlot(myseur, reduction = "tsne")
 dev.off()
+png(paste(name, "_default_umap.png", sep=""), width=6, height=6, units="in", res=100)
+DimPlot(myseur, reduction = "umap")
+dev.off()
 saveRDS(myseur, paste(name,"SeurObj.rds", sep="_"));
 
-DimPlot(myseur, reduction = "tsne")
-name
-dim(myseur)
 }

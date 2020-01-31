@@ -23,7 +23,11 @@ my_markers <- function(mat) {
 
 
 run_scmap_seurat <- function(myseur, scmap_ref=map1_ref, return_sce=FALSE) {
-	mysce <- as.SingleCellExperiment(myseur)
+	myseur@assays$RNA@counts <- myseur@assays$RNA@counts[match(rownames(myseur@assays$RNA@data), rownames(myseur@assays$RNA@counts)),]
+	mysce <- SingleCellExperiment(assays=list(counts=myseur@assays$RNA@counts, logcounts=myseur@assays$RNA@data), colData=myseur@meta.data)
+
+
+#	mysce <- as.SingleCellExperiment(myseur)
 	rowData(mysce)$feature_symbol=rownames(mysce);
 	mysce <- mysce[!grepl("^MT-", rownames(mysce)),] #remove MT genes.
 
