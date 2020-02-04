@@ -130,7 +130,13 @@ Use_markers_for_anno <- function(mat, clusters, ref_markers=map1_markers) {
 	rownames(result) <- c_lab;
 	
 	# assign each novel cluster to its best reference cluster.
-	best <- apply(result,2,function(x){rownames(result)[which(x==min(x))]})
+	best <- apply(result,2,function(x){
+		if (sum(x==min(x))==1) {
+			return(rownames(result)[which(x==min(x))])
+		} else {
+			return("ambiguous")
+		}
+	})
 
 	return(list(ps=result, 
 		cluster_assign=data.frame(cluster=names(best), label=best), 
