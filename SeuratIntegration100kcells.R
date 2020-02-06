@@ -68,17 +68,30 @@ for (i in 1:length(obj_list)) {
 	}
 }
 
-merged_obj <- Seurat::NormalizeData(merged_obj, verbose = FALSE) %>%
-    FindVariableFeatures(selection.method = "vst", nfeatures = 2000) %>% 
-    ScaleData(verbose = FALSE) %>% 
-    RunPCA(pc.genes = pbmc@var.genes, npcs = 20, verbose = FALSE)
+merged_obj <- Seurat::NormalizeData(merged_obj, verbose = FALSE) 
+merged_obj <- FindVariableFeatures(merged_obj, selection.method = "vst", nfeatures = 2000)
+merged_obj <- ScaleData(merged_obj, verbose = FALSE)
+merged_obj <- RunPCA(merged_obj, pc.genes = VariableGenes(merged_obj), npcs = 20, verbose = FALSE)
+merged_obj <- RunTSNE(merged_obj, dims = 1:10, verbose = FALSE)
 
-DimPlot(merged_obj, reduction="pca", group.by="donor", pt.size=0.1)
-merged_obj <- RunHarmony("donor", plot_convergence = TRUE)
-harmony_embeddings <- Embeddings(merged_obj, 'harmony')
+png("merged_not_integrated.png", width=6, height =6, units="in", res=50)
+DimPlot(merged_obj, reduction="tsne", group.by="donor", pt.size=0.1)
+dev.off();
+
+require("harmony")
+set.seed(10131)
+merged_obj <- RunHarmony(merged_obj, "donor", plot_convergence = TRUE)
 DimPlot(object = merged_obj, reduction = "harmony", pt.size = .1, group.by = "donor")
 
 merged_obj <- RunUMAP(merged_obj, reduction = "harmony", dims = 1:20)
 merged_obj <- RunTSNE(merged_obj, reduction = "harmony", dims = 1:20)
 
+png("merged_harmony_integrated_umap.png", width=6, height =6, units="in", res=50)
 DimPlot(merged_obj, reduction = "umap", group.by = "donor", pt.size = .1)
+dev.off();
+png("merged_harmony_integrated.png", width=6, height =6, units="in", res=50)
+DimPlot(merged_obj, reduction = "tsne", group.by = "donor", pt.size = .1)
+dev.off();
+saveRDS(merged_obj, "harmony_integrated.rds");
+
+# add harmony dimensions to integrated object?
