@@ -10,6 +10,7 @@ common_genes <- c();
 for (i in 1:length(seurfiles)) {
 	n <- samp_names[i];
 	obj <- readRDS(seurfiles[i]);
+	obj@meta.data$cell_barcode <- colnames(obj);
 	if (length(common_genes) == 0) {
 		common_genes <- rownames(obj);
 	} else {
@@ -25,86 +26,59 @@ for (i in 1:length(obj_list)) {
 	obj_list[[i]] <- obj_list[[i]][match(common_genes, rownames(obj_list[[i]])),]
 }
 
+#sctransform workflow - not available is installed version of seurat
+#liver.features <- SelectIntegrationFeatures(object.list = obj_list, nfeatures = 5000)
+#obj_list <- PrepSCTIntegration(object.list=obj_list, anchor.features = liver.features, verbose=F)
 
-anchors <- FindIntegrationAnchors(object.list=obj_list, dims=1:20)
+#anchors <- FindIntegrationAnchors(object.list = obj_list, normalization.method = "SCT", anchor.features = liver.features, verbose = FALSE)
 
-liver.integrated <- IntegrateData(anchorset = anchors, dims=1:20)
+#liver.integrated <- IntegrateData(anchorset = anchors, normalization.method = "SCT", verbose = FALSE)
 
-saveRDS(liver.integrated, "basicintegration.rds")
+#saveRDS(liver.integrated, "sctintegration.rds")
 
-# Once integrated
+#alternat workflow
+options(future.globals.maxSize = 10000 * 1024^2)
+set.seed(10129)
 
-liver.integrated <- readRDS("basicintegration.rds")
+liver.features <- SelectIntegrationFeatures(object.list = obj_list, nfeatures = 1000)
+anchors <- FindIntegrationAnchors(object.list = obj_list, anchor.features = liver.features)
+
+liver.integrated <- IntegrateData(anchorset = anchors)
+saveRDS(liver.integrated, "integration_v2.rds")
+
+# original workflow
+
+#anchors <- FindIntegrationAnchors(object.list=obj_list, dims=1:20)
+
+#liver.integrated <- IntegrateData(anchorset = anchors, dims=1:20)
+
+#saveRDS(liver.integrated, "basicintegration.rds")
 
 
-set.seed(7742)
-require("sctransform")
-liver.integrated <- ScaleData(liver.integrated);
-liver.integrated <- RunPCA(liver.integrated, features = VariableFeatures(object = liver.integrated))
-ElbowPlot(liver.integrated)
+# Harmony Workflow
 
-set.seed(8291)
-npcs <- 10
-res <- 1.2
-nkNN <- 20
-
-liver.integrated <- FindNeighbors(liver.integrated, dims = 1:npcs, k.param=nkNN)
-liver.integrated <- FindClusters(liver.integrated, resolution = res, k.param=nkNN)
-liver.integrated <- RunTSNE(liver.integrated, dims = 1:npcs)
-liver.integrated <- RunUMAP(liver.integrated, dims = 1:npcs, parallel=FALSE, n.neighbour=nkNN)
-png("Highres_integrated_umap.png", width=6, height=6, units="in", res=50)
-DimPlot(liver.integrated, reduction = "umap")
-dev.off()
-png("Highres_integrated_tsne.png", width=6, height=6, units="in", res=50)
-DimPlot(liver.integrated, reduction = "tsne")
-dev.off()
-png("Donor_integrated_umap.png", width=6, height=6, units="in", res=50)
-DimPlot(liver.integrated, reduction = "umap", group.by="orig.ident")
-dev.off()
-png("Donor_integrated_tsne.png", width=6, height=6, units="in", res=50)
-DimPlot(liver.integrated, reduction = "tsne", group.by="orig.ident")
-dev.off()
-
-png("Integrated_clusters_by_donor.png", width=6, height=6, units="in", res=50)
-barplot(table(liver.integrated@meta.data$orig.ident, liver.integrated@meta.data$seurat_clusters), col=rainbow(20))
-dev.off()
-
-saveRDS(liver.integrated, "basic_integration_analysis.rds");
-
-# Automated annotation? - doesn't work as too few genes left, but does work on original datasets. 
-# automated annotation at individual dataset level then add it here.
-source("Setup_autoannotation.R")
-liver.integrated <- readRDS("basic_integration_analysis.rds")
-
-test <- Use_markers_for_anno(liver.integrated@assays$RNA$data, liver.integrated@meta.data$seurat_clusters)
-
-all_anno <- readRDS("All20_automatedannotation.rds");
-
-cell_barcodes <- unlist(lapply(strsplit(rownames(liver.integrated@meta.data), "_"), function(x){return(x[[1]])}))
-
-liver.integrated@meta.data$cell_barcode <- cell_barcodes
-
-liver.integrated@meta.data$scmap_anno <- rep("unknown", ncol(liver.integrated));
-liver.integrated@meta.data$scmap_anno2 <- rep("unknown", ncol(liver.integrated));
-for (donor in unique(liver.integrated@meta.data$orig.ident)) {
-	cell_ids <- liver.integrated@meta.data$cell_barcode[liver.integrated@meta.data$orig.ident == donor]
-	anno <- all_anno[[donor]];
-	anno <- anno[match(cell_ids, anno$cell_barcode),]
-	liver.integrated@meta.data$scmap_anno[liver.integrated@meta.data$orig.ident == donor] <- as.character(anno$scmap_cluster_anno$lm1)
-	liver.integrated@meta.data$scmap_anno2[liver.integrated@meta.data$orig.ident == donor] <- as.character(anno$scmap_cell_anno)
+merged_obj <- NULL;
+common_genes <- c();
+for (i in 1:length(obj_list)) {
+        n <- samp_names[i];
+	if (i == 1) {
+		merged_obj <- obj_list[[i]]
+	} else {
+		merged_obj <- merge(merged_obj, y=obj_list[[i]], add.cell.ids=c("", n), project="LiverMap")
+	}
 }
 
+merged_obj <- Seurat::NormalizeData(merged_obj, verbose = FALSE) %>%
+    FindVariableFeatures(selection.method = "vst", nfeatures = 2000) %>% 
+    ScaleData(verbose = FALSE) %>% 
+    RunPCA(pc.genes = pbmc@var.genes, npcs = 20, verbose = FALSE)
 
-png("AutoAnno_integrated_umap.png", width=8, height=6, units="in", res=50)
-DimPlot(liver.integrated, reduction = "umap", group.by="scmap_anno")
-dev.off()
-png("AutoAnno_integrated_tsne.png", width=8, height=6, units="in", res=50)
-DimPlot(liver.integrated, reduction = "tsne", group.by="scmap_anno")
-dev.off()
-png("AutoAnno2_integrated_umap.png", width=8, height=6, units="in", res=50)
-DimPlot(liver.integrated, reduction = "umap", group.by="scmap_anno2")
-dev.off()
-png("AutoAnno2_integrated_tsne.png", width=8, height=6, units="in", res=50)
-DimPlot(liver.integrated, reduction = "tsne", group.by="scmap_anno2")
-dev.off()
+DimPlot(merged_obj, reduction="pca", group.by="donor", pt.size=0.1)
+merged_obj <- RunHarmony("donor", plot_convergence = TRUE)
+harmony_embeddings <- Embeddings(merged_obj, 'harmony')
+DimPlot(object = merged_obj, reduction = "harmony", pt.size = .1, group.by = "donor")
 
+merged_obj <- RunUMAP(merged_obj, reduction = "harmony", dims = 1:20)
+merged_obj <- RunTSNE(merged_obj, reduction = "harmony", dims = 1:20)
+
+DimPlot(merged_obj, reduction = "umap", group.by = "donor", pt.size = .1)
