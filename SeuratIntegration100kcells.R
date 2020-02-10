@@ -2,7 +2,7 @@ require("Seurat")
 
 set.seed(3921)
 
-seurfiles <- c("C37_SeurObj.rds", "C46_SeurObj.rds", "C52_SeurObj.rds", "C59_SeurObj.rds", "C39_SeurObj.rds", "C48_SeurObj.rds", "C53_SeurObj.rds", "C61_SeurObj.rds", "C41_SeurObj.rds", "C49_SeurObj.rds", "C54_SeurObj.rds", "C62_SeurObj.rds", "C42_SeurObj.rds", "C50_SeurObj.rds", "C56_SeurObj.rds", "C63_SeurObj.rds", "C43_SeurObj.rds", "C51_SeurObj.rds", "C58_SeurObj.rds", "C64_SeurObj.rds");
+seurfiles <- c("C37_Anno_SeurObj.rds", "C46_Anno_SeurObj.rds", "C52_Anno_SeurObj.rds", "C59_Anno_SeurObj.rds", "C39_Anno_SeurObj.rds", "C48_Anno_SeurObj.rds", "C53_Anno_SeurObj.rds", "C61_Anno_SeurObj.rds", "C41_Anno_SeurObj.rds", "C49_Anno_SeurObj.rds", "C54_Anno_SeurObj.rds", "C62_Anno_SeurObj.rds", "C42_Anno_SeurObj.rds", "C50_Anno_SeurObj.rds", "C56_Anno_SeurObj.rds", "C63_Anno_SeurObj.rds", "C43_Anno_SeurObj.rds", "C51_Anno_SeurObj.rds", "C58_Anno_SeurObj.rds", "C64_Anno_SeurObj.rds");
 
 samp_names <- unlist(lapply(strsplit(seurfiles, "_"), function(x){x[[1]]}))
 obj_list <- list()
