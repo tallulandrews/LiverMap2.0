@@ -20,7 +20,7 @@ require(Seurat)
 require(Matrix)
 
 #scmap based
-myseur <- readRDS(paste(name,"SeurObj.rds", sep="_"));
+myseur <- readRDS(paste(name,"Anno_SeurObj.rds", sep="_"));
 
 orig_dims <- dim(myseur)
 
@@ -30,13 +30,13 @@ new_dims <- dim(myseur)
 print(name)
 print(identical(orig_dims, new_dims))
 # cluster based
-#norm <- myseur@assays$RNA@data
-#clus_lab <- myseur@meta.data$seurat_clusters
+norm <- myseur@assays$RNA@data
+clus_lab <- myseur@meta.data$seurat_clusters
 
-#res <- Use_markers_for_anno(norm, clus_lab)
-#myseur@meta.data$marker_anno <- res$cell_assign;
+res <- Use_markers_for_anno(norm, clus_lab)
+myseur@meta.data$marker_anno <- res$cell_assign;
 
-saveRDS(myseur, paste(name,"Anno_SeurObj.rds", sep="_"));
+saveRDS(myseur, paste(name,"Anno_SeurObj2.rds", sep="_"));
 
 anno_tab <- myseur@meta.data
 anno_tab$cell_barcode <- colnames(myseur);
