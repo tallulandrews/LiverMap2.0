@@ -36,6 +36,12 @@ clus_lab <- myseur@meta.data$seurat_clusters
 res <- Use_markers_for_anno(norm, clus_lab)
 myseur@meta.data$marker_anno <- res$cell_assign;
 
+# SingleR
+require("SingleR")
+
+labs_singleR <- do_SingleR(myseur)
+myseur@meta.data$singleR <- lab_singleR[,1]
+
 saveRDS(myseur, paste(name,"Anno_SeurObj2.rds", sep="_"));
 
 anno_tab <- myseur@meta.data
@@ -47,7 +53,7 @@ all_anno[[name]] <- anno_tab;
 
 }
 
-saveRDS(all_anno, "All20_automatedannotation.rds");
+saveRDS(all_anno, "All20_automatedannotation2.rds");
 
 
 

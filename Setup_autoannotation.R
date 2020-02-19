@@ -144,3 +144,7 @@ Use_markers_for_anno <- function(mat, clusters, ref_markers=map1_markers) {
 }
 
 
+do_SingleR <- function(myseur, ref=map1_ref) {
+	out <- SingleR(method="single", as.matrix(myseur@assays$RNA@data), as.matrix(logcounts(ref)), ref$cell_type1, numCores=1)
+	return(out$labels1)
+}
