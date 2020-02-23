@@ -71,14 +71,91 @@ metadata <- read.table("Metadata20LiverMapPlusParams.csv", sep=",", header=T)
 
 pats <- levels(factor(int.obj@meta.data$donor))
 sex <- as.character(metadata[match(pats, metadata$Name),"sex"])
+age <- as.character(metadata[match(pats, metadata$Name),"age"])
+bmi <- as.character(metadata[match(pats, metadata$Name),"BMI"])
 sex[!sex %in% c("M", "F")] <- "Unk"
 int.obj@meta.data$sex <- sex[factor(int.obj@meta.data$donor)]
+int.obj@meta.data$age <- age[factor(int.obj@meta.data$donor)]
+int.obj@meta.data$bmi <- bmi[factor(int.obj@meta.data$donor)]
+
 
 png("General_donor_label_harmony_tsne.png", width=6.5, height=6, units="in", res=300)
 DimPlot(int.obj, reduction = "tsne", group.by = "donor", pt.size = .1)
 dev.off();
 
 DimPlot(int.obj, reduction = "tsne", group.by = "sex", pt.size = .1)+scale_color_manual(values=c("salmon","cornflowerblue", "grey50"))
+
+
+## Super General summary & metadata analysis ##
+
+int.obj$general_lab <- int.obj$autoanno_c
+int.obj$general_lab[grepl("Macropha", int.obj$general_lab)] <- "Macrophage"
+int.obj$general_lab[grepl("LSEC", int.obj$general_lab)] <- "LSECs"
+
+table(int.obj$general_lab)
+table(int.obj$general_lab)/sum(table(int.obj$general_lab))
+
+tab <- table(int.obj$general_lab, int.obj$sex)
+tab <- t(t(tab)/colSums(tab))
+tab <- tab[,-3]
+
+
+png("General_types_by_gender.png", width=9, height=5, units="in", res=300)
+par(mfrow=c(1,2))
+pie(tab[,1], col=Colour_scheme[c(1,3,4,6,7,9),2], main="Male")
+pie(tab[,2], col=Colour_scheme[c(1,3,4,6,7,9),2], main="Female")
+dev.off()
+
+
+# categorize continuous variables.
+int.obj@meta.data$age <- as.numeric(int.obj@meta.data$age)
+int.obj@meta.data$bmi <- as.numeric(int.obj@meta.data$bmi)
+bins_Age <- c(0,35, 60,300)
+names_age <- c("young", "adult", "elderly")
+bins_BMI <- c(0, 15,18,25,30,35,40, 100);
+names_bmi <- c("very weight", "underweight", "normal", "overweight", "obese", "very obese")
+
+binned <- cut(int.obj@meta.data$age, breaks=bins_Age)
+lab <- names_age[binned]
+int.obj@meta.data$age_cat <- lab
+
+binned <- cut(int.obj@meta.data$bmi, breaks=bins_BMI)
+lab <- names_bmi[binned]
+int.obj@meta.data$bmi_cat <- lab
+
+
+tab <- table(int.obj$general_lab, int.obj$age_cat)
+tab <- t(t(tab)/colSums(tab))
+tab <- tab[,c(3,1,2)]
+
+
+png("General_types_by_age.png", width=9*3/2, height=5, units="in", res=300)
+par(mfrow=c(1,3))
+pie(tab[,1], col=Colour_scheme[c(1,3,4,6,7,9),2], main="Young")
+pie(tab[,2], col=Colour_scheme[c(1,3,4,6,7,9),2], main="Adult")
+pie(tab[,3], col=Colour_scheme[c(1,3,4,6,7,9),2], main="Elderly")
+dev.off()
+
+
+
+int.obj$type_anno <- int.obj$scmap_anno2
+int.obj$type_anno[grepl("Macropha", int.obj$type_anno)] <- "Macrophage"
+int.obj$type_anno[grepl("LSEC", int.obj$type_anno)] <- "LSECs"
+int.obj$type_anno[grepl("Tcell", int.obj$type_anno)] <- "Tcells"
+int.obj$type_anno[grepl("Bcell", int.obj$type_anno)] <- "Bcells"
+int.obj$type_anno[grepl("Hep", int.obj$type_anno)] <- "Hepatocyte"
+
+
+
+
+
+
+
+
+
+q();
+
+
 # Output:
 
 # Auto-anno table:
