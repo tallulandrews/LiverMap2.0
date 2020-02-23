@@ -30,7 +30,7 @@ all_genes <- sort(all_genes);
 #	obj_list[[i]] <- obj_list[[i]][match(all_genes, rownames(obj_list[[i]])),]
 #}
 
-# Harmony Workflow
+# Merge Datasets
 
 merged_obj <- NULL;
 all_genes <- c();
@@ -49,9 +49,13 @@ merged_obj <- FindVariableFeatures(merged_obj, selection.method = "vst", nfeatur
 merged_obj <- ScaleData(merged_obj, verbose = FALSE)
 merged_obj <- RunPCA(merged_obj, pc.genes = VariableGenes(merged_obj), npcs = 20, verbose = FALSE)
 merged_obj <- RunTSNE(merged_obj, dims = 1:10, verbose = FALSE)
+merged_obj <- RunUMAP(merged_obj, dims = 1:10, verbose = FALSE)
 
-png("merged_not_integrated.png", width=6, height =6, units="in", res=50)
+png("merged_not_integrated_tsne.png", width=6, height =6, units="in", res=300)
 DimPlot(merged_obj, reduction="tsne", group.by="donor", pt.size=0.1)
+dev.off();
+png("merged_not_integrated_umap.png", width=6, height =6, units="in", res=300)
+DimPlot(merged_obj, reduction="umap", group.by="donor", pt.size=0.1)
 dev.off();
 
 require("harmony")
