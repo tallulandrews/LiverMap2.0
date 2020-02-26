@@ -1,6 +1,6 @@
-Celltype,orig.clusters,ncells,ngenes,nPCs,Fine_res,Coarse_res,nclusters,nkNN,seed1,seed2
-Macrophage,10-13-14,11283,7991,15,knn_70_res_1.1,knn_50_res_0.9,50,7742,07219
-Tcell,8-22,?,?,15,?,?,?,7742,07219
-LSEC,7-16,?,?,15,?,?,?,7742,07219
-Bcell,17,?,?,15,?,?,?,7742,07219
-Hepatocyte,0-1-2-3-4-5-6-9-11-12-15-19-20,?,?,15,?,?,?,7742,07219
+Celltype,orig.clusters,ncells,ngenes,nPCs,Fine_res,Coarse_res,Use_res,nclusters,nkNN,seed1,seed2,APcp
+Macrophage,10-13-14,11283,7991,15,knn_70_res_1.1,knn_50_res_0.9,knn_50_res_0.9,11,50,7742,07219,-5
+Tcell,8-22,7656,7773,15,knn_50_res_1.3,knn_40_res_0.3,knn_40_res_0.3,9,40,7742,07219,-5
+LSEC,7-16,9523,8073,15,knn_50_res_1.1,knn_40_res_0.1,knn_50_res_1.1,13,50,7742,07219,-2.5
+Bcell,17,1539,6349,15,knn_40_res_1.3,knn_40_res_0.5,knn_40_res_0.5,6,40,7742,07219,-5
+Hepatocyte,0-1-2-3-4-5-6-9-11-12-15-19-20,?,?,15,?,?,?,?,?,7742,07219,-5

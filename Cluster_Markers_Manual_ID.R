@@ -35,6 +35,7 @@ agg_coord_by_cluster <- function(coords, clusters) {
 
 
 lab_pos <- agg_coord_by_cluster(int.obj@reductions$tsne@cell.embeddings, int.obj@meta.data$Fine_clusters)
+lab_pos_umap <- agg_coord_by_cluster(int.obj@reductions$umap@cell.embeddings, int.obj@meta.data$Fine_clusters)
 lab_id <- colnames(lab_pos)
 clust_autoanno <- sapply(strsplit(Cluster_guesses, "\\."), function(a){a[[2]]})
 clust_autoanno[clust_autoanno == "UnidentifiedHep"] <- "Hepatocyte";
@@ -65,6 +66,9 @@ require("ggplot2")
 png("General_autoanno_label_harmony_tsne.png", width=7.5, height=6, units="in", res=300)
 DimPlot(int.obj, reduction = "tsne", group.by = "autoanno_c", pt.size = .1)+scale_color_manual(values=Colour_scheme[,2])+annotate("text", x=lab_pos[1,], y=lab_pos[2,], label=lab_id, colour="grey35")
 dev.off();
+png("General_autoanno_label_harmony_umap.png", width=7.5, height=6, units="in", res=300)
+DimPlot(int.obj, reduction = "umap", group.by = "autoanno_c", pt.size = .1)+scale_color_manual(values=Colour_scheme[,2])+annotate("text", x=lab_pos_umap[1,], y=lab_pos_umap[2,], label=lab_id, colour="grey35")
+dev.off();
 
 
 metadata <- read.table("Metadata20LiverMapPlusParams.csv", sep=",", header=T)
@@ -83,8 +87,21 @@ png("General_donor_label_harmony_tsne.png", width=6.5, height=6, units="in", res
 DimPlot(int.obj, reduction = "tsne", group.by = "donor", pt.size = .1)
 dev.off();
 
+png("General_sex_harmony_tsne.png", width=6.5, height=6, units="in", res=300)
 DimPlot(int.obj, reduction = "tsne", group.by = "sex", pt.size = .1)+scale_color_manual(values=c("salmon","cornflowerblue", "grey50"))
+dev.off();
 
+png("General_sex_harmony_umap.png", width=6.5, height=6, units="in", res=300)
+DimPlot(int.obj, reduction = "umap", group.by = "sex", pt.size = .1)+scale_color_manual(values=c("salmon","cornflowerblue", "grey50"))
+dev.off();
+
+png("General_cluster_harmony_umap.png", width=6.5, height=6, units="in", res=300)
+DimPlot(int.obj, reduction = "umap", group.by = "Fine_clusters", pt.size = .1)
+dev.off();
+
+png("General_cluster_harmony_tsne.png", width=6.5, height=6, units="in", res=300)
+DimPlot(int.obj, reduction = "tsne", group.by = "Fine_clusters", pt.size = .1)
+dev.off();
 
 ## Super General summary & metadata analysis ##
 

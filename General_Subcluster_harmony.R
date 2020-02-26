@@ -1,7 +1,7 @@
 require("Seurat")
 source("My_R_Scripts.R")
 
-Set=2;
+Set=4;
 
 params <- read.delim("Table_SubClustering.csv", sep=",", header=T, stringsAsFactors=FALSE);
 
@@ -87,7 +87,7 @@ require("apcluster")
 require("gplots")
 set.seed(18371)
 
-res1 <- apcluster(-1*as.matrix(clust_dists), p=-5)
+res1 <- apcluster(-1*as.matrix(clust_dists), p=-2.5)
 #res2 <- apcluster(as.matrix(clust_similr1), p=-2)
 #res3 <- apcluster(as.matrix(clust_similr1), p=-2)
 
@@ -95,10 +95,12 @@ res1 <- apcluster(-1*as.matrix(clust_dists), p=-5)
 
 coarse_lvl <- params[Set,"Coarse_res"] # <- Update
 fine_lvl <- params[Set,"Fine_res"] # <- Update
+use_lvl <- params[Set,"Use_res"]
 
 #manually select which exemplar to use
 liver.integrated@meta.data$Coarse_clusters <- liver.integrated@meta.data[[coarse_lvl]] 
 liver.integrated@meta.data$Fine_clusters <- liver.integrated@meta.data[[fine_lvl]]
+liver.integrated@meta.data$Use_clusters <- liver.integrated@meta.data[[use_lvl]]
 
 apcluster::heatmap(res1, -1*as.matrix(clust_dists))
 
@@ -117,13 +119,13 @@ set.seed(as.numeric(params[Set,"seed2"]))
 
 liver.integrated <- RunTSNE(liver.integrated, reduction="harmony",  dims = 1:npcs)
 liver.integrated <- RunUMAP(liver.integrated, reduction="harmony",  dims = 1:npcs, parallel=FALSE, n.neighbour=nkNN)
-png(paste(proj_name, "coarse_umap.png", sep="_"), width=6, height=6, units="in", res=50)
-DimPlot(liver.integrated, reduction = "umap", group.by="Coarse_clusters")
+png(paste(proj_name, "_umap.png", sep="_"), width=6, height=6, units="in", res=50)
+DimPlot(liver.integrated, reduction = "umap", group.by="Use_clusters")
 dev.off()
-png(paste(proj_name, "coarse_tsne.png", sep="_"), width=6, height=6, units="in", res=50)
-DimPlot(liver.integrated, reduction = "tsne", group.by="Coarse_clusters")
+png(paste(proj_name, "_tsne.png", sep="_"), width=6, height=6, units="in", res=50)
+DimPlot(liver.integrated, reduction = "tsne", group.by="Use_clusters")
 dev.off()
-png(paste(proj_name, "coarse_umap_donor.png", sep="_"), width=6, height=6, units="in", res=50)
+png(paste(proj_name, "_umap_donor.png", sep="_"), width=6, height=6, units="in", res=50)
 DimPlot(liver.integrated, reduction = "umap", group.by="orig.ident")
 dev.off()
 DimPlot(liver.integrated, reduction = "tsne", group.by="orig.ident")
@@ -134,7 +136,7 @@ tab <- table(liver.integrated@meta.data$orig.ident, liver.integrated@meta.data$C
 
 DimPlot(liver.integrated, reduction = "umap", group.by="scmap_anno")
 DimPlot(liver.integrated, reduction = "tsne", group.by="scmap_anno")
-png(paste(proj_name, "coarse_umap_autoanno.png", sep="_"), width=6, height=6, units="in", res=50)
+png(paste(proj_name, "_umap_autoanno.png", sep="_"), width=7.5, height=6, units="in", res=50)
 DimPlot(liver.integrated, reduction = "umap", group.by="scmap_anno2")
 dev.off()
 DimPlot(liver.integrated, reduction = "tsne", group.by="scmap_anno2")
