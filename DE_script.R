@@ -4,10 +4,10 @@ tidy_Seurat_output <- function(out) {
 	return(out)
 }
 
-#args <- commandArgs(trailingOnly=TRUE)
+args <- commandArgs(trailingOnly=TRUE)
 # file
 # clustername
-# edger_file
+# projname
 # cluster_col_name
 
 require(Seurat)
@@ -21,6 +21,9 @@ out_seur_wilcox <- FindMarkers(obj, ident.1=args[2], group.by="Use_clusters", lo
 
 require(MAST)
 out_seur_MAST <- FindMarkers(obj, ident.1=args[2], group.by="Use_clusters", logfc.threshold=-Inf, min.pct=0.1, min.diff.pct = -Inf, test.use="MAST", latent.vars=obj$donor)
+
+all_DE <- list(seur_wilcox=out_seur_wilcox, seur_mast=out_seur_MAST)
+saveRDS(all_DE, paste(args[3], args[2], "DE.rds", sep="_"))
 
 ## MAST? ## - Slow and can't figure out how to do the contrasts.
 tidy_mast_output <- function(output, this_contrast) {
@@ -57,19 +60,22 @@ set.seed(9175)
 
 edger_obj <- DGEList(obj@assays$RNA@counts, samples=obj@meta.data, group=obj@meta.data$Use_clusters)
 design <- model.matrix(~Use_clusters+donor+nFeature_RNA, data=edger_obj$samples)
+design <- design[,colSums(design) > 0];
 
 coef_names <- colnames(design);
 
-if (!file.exsists(args[3])) {
+edger_file <- paste(args[4], "_edger.rds", sep="")
+
+if (!file.exists(edger_file)) {
 	edger_obj <- estimateDisp(edger_obj, design)
 	fit <- glmQLFit(edger_obj, design)
-	saveRDS(fit, args[3]);
+	saveRDS(fit, edger_file);
 } else {
-	fit <- readRDS(args[3])
+	fit <- readRDS(edger_file)
 }
 
 contrast_vec <-rep(0, length(coef_names));
-this_cluster <- paste("Use_clusters", arg[2], sep="");
+this_cluster <- paste("Use_clusters", args[2], sep="");
 contrast_vec[grepl("Use_clusters", coef_names)] <- -1;
 contrast_vec[1] <- -1
 if (this_cluster %in% coef_names) {
@@ -80,3 +86,5 @@ if (this_cluster %in% coef_names) {
 
 this_vs_all <- glmQLFTest(fit, contrast=contrast_vec)
 out <- topTags(this_vs_all, nrow(obj));
+all_DE <- list(seur_wilcox=out_seur_wilcox, seur_mast=out_seur_MAST, edger=out)
+saveRDS(all_DE, paste(args[3], args[2], "DE.rds", sep="_"))
