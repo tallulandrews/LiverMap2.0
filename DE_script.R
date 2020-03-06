@@ -88,3 +88,45 @@ this_vs_all <- glmQLFTest(fit, contrast=contrast_vec)
 out <- topTags(this_vs_all, nrow(obj));
 all_DE <- list(seur_wilcox=out_seur_wilcox, seur_mast=out_seur_MAST, edger=out)
 saveRDS(all_DE, paste(args[3], args[2], "DE.rds", sep="_"))
+
+
+## Pseudobulk ##
+source("~/scripts/LiverMap2.0/My_R_Scripts.R")
+
+bulks <- get_pseudobulk(a@assays$RNA@counts, a@meta.data$Coarse_clusters, a@meta.data$donor)
+labs <- strsplit(colnames(bulks), "_")
+c_labs <- sapply(labs, function(x){unlist(x[[1]])})
+d_labs <- sapply(labs, function(x){unlist(x[[2]])})
+
+
+require("edgeR")
+edger_obj <- DGEList(bulks, samples=data.frame(cluster=c_labs, donor=d_labs), group=c_labs)
+edger_obj <- calcNormFactors(edger_obj)
+design <- model.matrix(~cluster+donor, data=edger_obj$samples)
+design <- design[,colSums(design) > 0];
+
+coef_names <- colnames(design);
+
+edger_file <- paste(args[4], "_pseudobulk_edger.rds", sep="")
+if (!file.exists(edger_file)) {
+        edger_obj <- estimateDisp(edger_obj, design)
+        fit <- glmQLFit(edger_obj, design)
+        saveRDS(fit, edger_file);
+} else {
+        fit <- readRDS(edger_file)
+}
+
+contrast_vec <-rep(0, length(coef_names));
+this_cluster <- paste("cluster", args[2], sep="");
+contrast_vec[grepl("cluster", coef_names)] <- -1;
+contrast_vec[1] <- -1
+if (this_cluster %in% coef_names) {
+        contrast_vec[coef_names==this_cluster]<- 1;
+} else {
+        contrast_vec[1] <- 1;
+}
+
+this_vs_all <- glmQLFTest(fit, contrast=contrast_vec)
+out <- topTags(this_vs_all, nrow(obj));
+all_DE <- list(seur_wilcox=out_seur_wilcox, seur_mast=out_seur_MAST, edger=out)
+saveRDS(all_DE, paste(args[3], args[2], "_pseudobulk_DE.rds", sep="_"))
