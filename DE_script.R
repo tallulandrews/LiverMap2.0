@@ -1,3 +1,5 @@
+# too look into: Monocle DE, diffcyt : https://bioconductor.org/packages/release/bioc/vignettes/diffcyt/inst/doc/diffcyt_workflow.html
+
 tidy_Seurat_output <- function(out) {
 	out$score <- out$avg_logFC*(out$pct.1-out$pct.2)
 	out <- out[order(out$score, decreasing=T),]
@@ -40,6 +42,7 @@ tidy_mast_output <- function(output, this_contrast) {
 	return(out);
 }
 
+# too slow!
 #require(MAST)
 #sca <- FromMatrix(as.matrix(obj@assays$RNA@data))
 #ngenes <- colSums(obj@assays$RNA@counts > 0)
@@ -55,45 +58,45 @@ tidy_mast_output <- function(output, this_contrast) {
 #out <- tidy_mast_output(res1, this_contrast)
 
 
-require("edgeR")
-set.seed(9175)
+#require("edgeR")
+#set.seed(9175)
 
-edger_obj <- DGEList(obj@assays$RNA@counts, samples=obj@meta.data, group=obj@meta.data$Use_clusters)
-design <- model.matrix(~Use_clusters+donor+nFeature_RNA, data=edger_obj$samples)
-design <- design[,colSums(design) > 0];
+#edger_obj <- DGEList(obj@assays$RNA@counts, samples=obj@meta.data, group=obj@meta.data$Use_clusters)
+#design <- model.matrix(~Use_clusters+donor+nFeature_RNA, data=edger_obj$samples)
+#design <- design[,colSums(design) > 0];
 
-coef_names <- colnames(design);
+#coef_names <- colnames(design);
 
-edger_file <- paste(args[4], "_edger.rds", sep="")
+#edger_file <- paste(args[4], "_edger.rds", sep="")
 
-if (!file.exists(edger_file)) {
-	edger_obj <- estimateDisp(edger_obj, design)
-	fit <- glmQLFit(edger_obj, design)
-	saveRDS(fit, edger_file);
-} else {
-	fit <- readRDS(edger_file)
-}
+#if (!file.exists(edger_file)) {
+#	edger_obj <- estimateDisp(edger_obj, design)
+#	fit <- glmQLFit(edger_obj, design)
+#	saveRDS(fit, edger_file);
+#} else {
+#	fit <- readRDS(edger_file)
+#}
 
-contrast_vec <-rep(0, length(coef_names));
-this_cluster <- paste("Use_clusters", args[2], sep="");
-contrast_vec[grepl("Use_clusters", coef_names)] <- -1;
-contrast_vec[1] <- -1
-if (this_cluster %in% coef_names) {
-	contrast_vec[coef_names==this_cluster]<- 1;
-} else {
-	contrast_vec[1] <- 1;
-}
+#contrast_vec <-rep(0, length(coef_names));
+#this_cluster <- paste("Use_clusters", args[2], sep="");
+#contrast_vec[grepl("Use_clusters", coef_names)] <- -1;
+#contrast_vec[1] <- -1
+#if (this_cluster %in% coef_names) {
+#	contrast_vec[coef_names==this_cluster]<- 1;
+#} else {
+#	contrast_vec[1] <- 1;
+#}
 
-this_vs_all <- glmQLFTest(fit, contrast=contrast_vec)
-out <- topTags(this_vs_all, nrow(obj));
-all_DE <- list(seur_wilcox=out_seur_wilcox, seur_mast=out_seur_MAST, edger=out)
-saveRDS(all_DE, paste(args[3], args[2], "DE.rds", sep="_"))
+#this_vs_all <- glmQLFTest(fit, contrast=contrast_vec)
+#out <- topTags(this_vs_all, nrow(obj));
+#all_DE <- list(seur_wilcox=out_seur_wilcox, seur_mast=out_seur_MAST, edger=out)
+#saveRDS(all_DE, paste(args[3], args[2], "DE.rds", sep="_"))
 
 
 ## Pseudobulk ##
 source("~/scripts/LiverMap2.0/My_R_Scripts.R")
 
-bulks <- get_pseudobulk(a@assays$RNA@counts, a@meta.data$Coarse_clusters, a@meta.data$donor)
+bulks <- get_pseudobulk(obj@assays$RNA@counts, obj@meta.data$Coarse_clusters, obj@meta.data$donor)
 labs <- strsplit(colnames(bulks), "_")
 c_labs <- sapply(labs, function(x){unlist(x[[1]])})
 d_labs <- sapply(labs, function(x){unlist(x[[2]])})
@@ -107,7 +110,7 @@ design <- design[,colSums(design) > 0];
 
 coef_names <- colnames(design);
 
-edger_file <- paste(args[4], "_pseudobulk_edger.rds", sep="")
+edger_file <- paste(args[3], "_pseudobulk_edger.rds", sep="")
 if (!file.exists(edger_file)) {
         edger_obj <- estimateDisp(edger_obj, design)
         fit <- glmQLFit(edger_obj, design)
@@ -130,3 +133,69 @@ this_vs_all <- glmQLFTest(fit, contrast=contrast_vec)
 out <- topTags(this_vs_all, nrow(obj));
 all_DE <- list(seur_wilcox=out_seur_wilcox, seur_mast=out_seur_MAST, edger=out)
 saveRDS(all_DE, paste(args[3], args[2], "_pseudobulk_DE.rds", sep="_"))
+
+### Diffcyt? ###
+require(diffcyt)
+
+# make input:
+input_list <- list()
+experiment_info <- c()
+for (d in unique(obj@meta.data$donor)) {
+	for (c in unique(obj@meta.data$Use_clusters)) {
+		this <- obj@assays$RNA@counts[,obj@meta.data$donor ==d & obj@meta.data$Use_cluster ==c]
+		sample <- paste(d, c, sep="_")
+		if (sum(obj@meta.data$donor ==d & obj@meta.data$Use_cluster ==c) > 0) {
+			input_list[[sample]] <- as.matrix(t(this));
+			experiment_info <- rbind(experiment_info, c(sample, d, c))
+		}
+	}
+}
+colnames(experiment_info) <- c("sample_id", "patient_id", "cell_type")
+
+#input data - list of matrices for each 'sample'
+#experiment_info - dataframe of metadata for samples
+
+#marker_info - dataframe of metadata for markers
+
+#preprocess
+d_se <- prepareData(input_list, data.frame(experiment_info), marker_info=data.frame(gene=rownames(obj), marker_name=rownames(obj)))
+#d_se <- transformData(d_se) <- don't do this b/c designed for CyTOF
+#d_se <- generateClusters(d_se, seed_clustering = 123) <- FlowSOM clustering
+# Calculate cluster cell counts
+d_counts <- calcCounts(d_se)
+
+d_se@elementMetadata$cluster_id <- matched_cell_cell_type
+
+# Calculate cluster medians
+d_medians <- calcMedians(d_se)
+
+# Create design matrix
+# note: selecting columns containing group IDs and patient IDs (for an 
+# unpaired dataset, only group IDs would be included)
+design <- createDesignMatrix(
+  data.frame(experiment_info), cols_design = c("cell_type", "patient_id")
+)
+# Create contrast matrix
+coef_names <- colnames(design)
+contrast_vec <-rep(0, length(coef_names));
+this_cluster <- paste("cell_type", args[2], sep="");
+contrast_vec[grepl("cell_type", coef_names)] <- -1;
+contrast_vec[1] <- -1
+if (this_cluster %in% coef_names) {
+        contrast_vec[coef_names==this_cluster]<- 1;
+} else {
+        contrast_vec[1] <- 1;
+}
+contrast <- createContrast(contrast_vec)
+
+
+# check
+nrow(contrast) == ncol(design)
+
+# Test for differential abundance (DA) of clusters
+res_DA <- testDA_edgeR(d_counts, design, contrast)
+
+# display table of results for top DA clusters
+topTable(res_DA, format_vals = TRUE)
+
+
