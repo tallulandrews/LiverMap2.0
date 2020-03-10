@@ -76,7 +76,7 @@ get_pseudobulk <- function(mat, clusters, donors) {
         donor_freqs <- table(donors)/length(donors)
         # avg expression per donor in this cluster
         clust_expr <- sapply(c, function(clust) {
-                d_expr <- group_rowmeans(mat[,clust], donors[clust], type="mean");
+                d_expr <- group_rowmeans(mat[,clust], donors[clust], type="sum");
 		colnames(d_expr) <- paste(clusters[clust[1]], colnames(d_expr), sep="_")
                 return(d_expr);
         })
