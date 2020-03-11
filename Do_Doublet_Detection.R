@@ -1,6 +1,9 @@
 my_metadata_table <- read.table("Metadata20LiverMapPlusParams.csv", sep=",", header=T, stringsAsFactors=FALSE);
 
-source("../AutoAnnotation/Setup_autoannotation.R")
+require(dplyr)
+require(Seurat)
+require(Matrix)
+require(DoubletFinder)
 
 all_doublet <- list();
 
@@ -15,28 +18,33 @@ res <- 5
 
 
 print(name);
-require(dplyr)
-require(Seurat)
-require(Matrix)
-require(DoubletFinder)
 
-if (file.exists(paste(name,"Anno_SeurObj.rds", sep="_"))) {
-myseur <- readRDS(paste(name,"Anno_SeurObj.rds", sep="_"));
+if (file.exists(paste(name,"Anno_SeurObj2.rds", sep="_"))) {
+myseur <- readRDS(paste(name,"Anno_SeurObj2.rds", sep="_"));
+} else {
+print("Anno Object file missing!")
+}
 
 clus_lab <- myseur@meta.data$seurat_clusters
 type_lab <- myseur@meta.data$marker_anno #fewer labels so better estimation!
 
-
-sweep.res.list_liver <- paramSweep_v3(myseur, PCs = 1:10, sct = FALSE)
+# optimize parameters
+sweep.res.list_liver <- paramSweep_v3(myseur, PCs = 1:npcs, sct = TRUE)
 sweep.stats_liver <- summarizeSweep(sweep.res.list_liver, GT = FALSE)
+pN <- as.numeric(as.character((sweep.stats_liver[sweep.stats_liver[,3] == max(sweep.stats_liver[,3]),1])))
 bcmvn_liver <- find.pK(sweep.stats_liver)
+pK <- bcmvn_liver[bcmvn_liver$BCmetric == max(bcmvn_liver$BCmetric),2]
+
+# estimate homotypics
+n_cells <- ncol(myseur);
 homotypic.prop <- modelHomotypic(type_lab) #Could also use clus_lab       
 rate <- 0.9/100*n_cells/1000 #from:http://cgs.hku.hk/portal/files/GRC/Events/Seminars/2017/20170904/chromium_single_cell.pdf
 nExp_poi <- round(rate*n_cells)  
-n_cells <- ncol(myseur);
 nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
-myseur <- doubletFinder_v3(myseur, PCs = 1:10, pN = 0.25, pK = 0.09, nExp = nExp_poi, reuse.pANN = FALSE, sct = FALSE)
-myseur <- doubletFinder_v3(myseur, PCs = 1:10, pN = 0.25, pK = 0.09, nExp = nExp_poi.adj, reuse.pANN = "pANN_0.25_0.09_913", sct = FALSE)
+
+#find doublets -- Buggy!!
+myseur <- doubletFinder_v3(myseur, PCs = 1:npcs, pN = pN, pK = pK, nExp = nExp_poi, reuse.pANN = FALSE, sct = FALSE) 
+myseur <- doubletFinder_v3(myseur, PCs = 1:npcs, pN = pN, pK = pK, nExp = nExp_poi.adj, reuse.pANN = "pANN_0.25_0.09_913", sct = FALSE)
 
 anno_tab <- myseur@meta.data
 anno_tab$cell_barcode <- colnames(myseur);
@@ -44,7 +52,6 @@ anno_tab$cell_barcode <- colnames(myseur);
 rownames(anno_tab) <- paste(anno_tab$orig.ident, anno_tab$cell_barcode, sep="_")
 
 all_doublet[[name]] <- anno_tab;
-}
 }
 
 saveRDS(all_doublet, "All20_automatedannotation.rds");
