@@ -1,4 +1,4 @@
-my_metadata_table <- read.table("Metadata20LiverMapPlusParams.csv", sep=",", header=T, stringsAsFactors=FALSE);
+my_metadata_table <- read.table("~/scripts/LiverMap2.0/Metadata20LiverMapPlusParams.csv", sep=",", header=T, stringsAsFactors=FALSE);
 
 require(dplyr)
 require(Seurat)
@@ -9,6 +9,7 @@ all_doublet <- list();
 
 
 for(dataset_row in 1:20) {
+dataset_row=1;
 
 set.seed(my_metadata_table$Seed[dataset_row])
 name <- my_metadata_table$Name[dataset_row]
@@ -34,6 +35,7 @@ sweep.stats_liver <- summarizeSweep(sweep.res.list_liver, GT = FALSE)
 pN <- as.numeric(as.character((sweep.stats_liver[sweep.stats_liver[,3] == max(sweep.stats_liver[,3]),1])))
 bcmvn_liver <- find.pK(sweep.stats_liver)
 pK <- bcmvn_liver[bcmvn_liver$BCmetric == max(bcmvn_liver$BCmetric),2]
+pK <- as.numeric(as.character(pK))
 
 # estimate homotypics
 n_cells <- ncol(myseur);
@@ -43,8 +45,8 @@ nExp_poi <- round(rate*n_cells)
 nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
 
 #find doublets -- Buggy!!
-myseur <- doubletFinder_v3(myseur, PCs = 1:npcs, pN = pN, pK = pK, nExp = nExp_poi, reuse.pANN = FALSE, sct = FALSE) 
-myseur <- doubletFinder_v3(myseur, PCs = 1:npcs, pN = pN, pK = pK, nExp = nExp_poi.adj, reuse.pANN = "pANN_0.25_0.09_913", sct = FALSE)
+myseur <- doubletFinder_v3(myseur, PCs = 1:npcs, pN = pN, pK = pK, nExp = nExp_poi, reuse.pANN = FALSE, sct = T) 
+myseur <- doubletFinder_v3(myseur, PCs = 1:npcs, pN = pN, pK = pK, nExp = nExp_poi.adj, reuse.pANN = paste("pANN", pN, pK, nExp_poi, sep="_"), sct = T)
 
 anno_tab <- myseur@meta.data
 anno_tab$cell_barcode <- colnames(myseur);
