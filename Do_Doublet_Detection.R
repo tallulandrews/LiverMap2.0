@@ -9,7 +9,6 @@ all_doublet <- list();
 
 
 for(dataset_row in 1:20) {
-dataset_row=1;
 
 set.seed(my_metadata_table$Seed[dataset_row])
 name <- my_metadata_table$Name[dataset_row]
