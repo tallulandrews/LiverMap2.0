@@ -2,7 +2,7 @@ require("Seurat")
 
 set.seed(3921)
 
-seurfiles <- c("C37_Anno_SeurObj.rds", "C46_Anno_SeurObj.rds", "C52_Anno_SeurObj.rds", "C59_Anno_SeurObj.rds", "C39_Anno_SeurObj.rds", "C48_Anno_SeurObj.rds", "C53_Anno_SeurObj.rds", "C61_Anno_SeurObj.rds", "C41_Anno_SeurObj.rds", "C49_Anno_SeurObj.rds", "C54_Anno_SeurObj.rds", "C62_Anno_SeurObj.rds", "C42_Anno_SeurObj.rds", "C50_Anno_SeurObj.rds", "C56_Anno_SeurObj.rds", "C63_Anno_SeurObj.rds", "C43_Anno_SeurObj.rds", "C51_Anno_SeurObj.rds", "C58_Anno_SeurObj.rds", "C64_Anno_SeurObj.rds");
+seurfiles <- c("C37_Anno_SeurObj2.rds", "C46_Anno_SeurObj2.rds", "C52_Anno_SeurObj2.rds", "C59_Anno_SeurObj2.rds", "C39_Anno_SeurObj2.rds", "C48_Anno_SeurObj2.rds", "C53_Anno_SeurObj2.rds", "C61_Anno_SeurObj2.rds", "C41_Anno_SeurObj2.rds", "C49_Anno_SeurObj2.rds", "C54_Anno_SeurObj2.rds", "C62_Anno_SeurObj2.rds", "C42_Anno_SeurObj2.rds", "C50_Anno_SeurObj2.rds", "C56_Anno_SeurObj2.rds", "C63_Anno_SeurObj2.rds", "C43_Anno_SeurObj2.rds", "C51_Anno_SeurObj2.rds", "C58_Anno_SeurObj2.rds", "C64_Anno_SeurObj2.rds");
 
 samp_names <- unlist(lapply(strsplit(seurfiles, "_"), function(x){x[[1]]}))
 obj_list <- list()
@@ -18,6 +18,7 @@ for (i in 1:length(seurfiles)) {
 	} else {
 		all_genes <- union(all_genes, rownames(obj));
 	}
+	obj@meta.data[[7]] <- obj@meta.data[[7]][[1]]
 	obj@meta.data$donor <- rep(n, ncol(obj));
 	obj_list[[n]] <- obj
 }
@@ -43,6 +44,9 @@ for (i in 1:length(obj_list)) {
 	}
 }
 saveRDS(merged_obj, "all_gene_merged_obj.rds")
+
+exit;
+
 
 merged_obj <- Seurat::NormalizeData(merged_obj, verbose = FALSE) 
 merged_obj <- FindVariableFeatures(merged_obj, selection.method = "vst", nfeatures = 2000)

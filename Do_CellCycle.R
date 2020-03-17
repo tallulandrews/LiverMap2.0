@@ -27,6 +27,7 @@ myseur <- FindVariableFeatures(myseur, selection.method = "vst")
 myseur <- ScaleData(myseur, features = rownames(myseur))
 
 myseur <- CellCycleScoring(myseur, s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
+myseur@meta.data$cell_barcode <- colnames(myseur);
 #RidgePlot(myseur, features = c("PCNA", "TOP2A", "MCM6", "MKI67"), ncol = 2)
 #myseur <- RunPCA(myseur, features = c(s.genes, g2m.genes))
 #DimPlot(myseur)

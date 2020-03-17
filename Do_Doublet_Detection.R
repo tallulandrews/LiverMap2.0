@@ -16,15 +16,18 @@ npcs <- my_metadata_table$nPCs[dataset_row]
 nkNN <- my_metadata_table$kNN[dataset_row]
 res <- 5
 
+tmp_file <- paste(name, "doublet_tmp.rds", sep="_")
+
 
 print(name);
+
+if(!file.exists(tmp_file)) {
 
 if (file.exists(paste(name,"Anno_SeurObj2.rds", sep="_"))) {
 myseur <- readRDS(paste(name,"Anno_SeurObj2.rds", sep="_"));
 } else {
 print("Anno Object file missing!")
 }
-if (!file.exists(paste(name, "Anno_SeurObj.rds", sep="_"))) {next;}
 
 clus_lab <- myseur@meta.data$seurat_clusters
 type_lab <- myseur@meta.data$marker_anno #fewer labels so better estimation!
@@ -33,6 +36,7 @@ type_lab <- myseur@meta.data$marker_anno #fewer labels so better estimation!
 sweep.res.list_liver <- paramSweep_v3(myseur, PCs = 1:npcs, sct = TRUE)
 sweep.stats_liver <- summarizeSweep(sweep.res.list_liver, GT = FALSE)
 pN <- as.numeric(as.character((sweep.stats_liver[sweep.stats_liver[,3] == max(sweep.stats_liver[,3]),1])))
+
 bcmvn_liver <- find.pK(sweep.stats_liver)
 pK <- bcmvn_liver[bcmvn_liver$BCmetric == max(bcmvn_liver$BCmetric),2]
 pK <- as.numeric(as.character(pK))
@@ -44,16 +48,26 @@ rate <- 0.9/100*n_cells/1000 #from:http://cgs.hku.hk/portal/files/GRC/Events/Sem
 nExp_poi <- round(rate*n_cells)  
 nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
 
-#find doublets -- Buggy!!
+#find doublets
+pN <- min(250, pN);
+pN <- max(20, pN);
+
 myseur <- doubletFinder_v3(myseur, PCs = 1:npcs, pN = pN, pK = pK, nExp = nExp_poi, reuse.pANN = FALSE, sct = T) 
 myseur <- doubletFinder_v3(myseur, PCs = 1:npcs, pN = pN, pK = pK, nExp = nExp_poi.adj, reuse.pANN = paste("pANN", pN, pK, nExp_poi, sep="_"), sct = T)
 
+myseur@meta.data$cell_barcode <- colnames(myseur);
 anno_tab <- myseur@meta.data
-anno_tab$cell_barcode <- colnames(myseur);
 
 rownames(anno_tab) <- paste(anno_tab$orig.ident, anno_tab$cell_barcode, sep="_")
+saveRDS(anno_tab, tmp_file)
+all_doublet[[name]] <- anno_tab;
+} else {
+anno_tab <- readRDS(tmp_file)
+
 
 all_doublet[[name]] <- anno_tab;
+
+}
 }
 
 saveRDS(all_doublet, "All20_doubletDetection.rds");

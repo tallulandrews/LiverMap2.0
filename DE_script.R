@@ -134,6 +134,8 @@ out <- topTags(this_vs_all, nrow(obj));
 all_DE <- list(seur_wilcox=out_seur_wilcox, seur_mast=out_seur_MAST, edger=out)
 saveRDS(all_DE, paste(args[3], args[2], "_pseudobulk_DE.rds", sep="_"))
 
+exit()
+hwoiehro
 ### Diffcyt? ###
 require(diffcyt)
 
