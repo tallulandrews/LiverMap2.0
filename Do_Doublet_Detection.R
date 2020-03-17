@@ -8,7 +8,7 @@ require(DoubletFinder)
 all_doublet <- list();
 
 
-for(dataset_row in 1:25) {
+for(dataset_row in 1:nrow(my_metadata_table)) {
 
 set.seed(my_metadata_table$Seed[dataset_row])
 name <- my_metadata_table$Name[dataset_row]
@@ -56,7 +56,7 @@ rownames(anno_tab) <- paste(anno_tab$orig.ident, anno_tab$cell_barcode, sep="_")
 all_doublet[[name]] <- anno_tab;
 }
 
-saveRDS(all_doublet, "All20_automatedannotation.rds");
+saveRDS(all_doublet, "All20_doubletDetection.rds");
 
 
 
