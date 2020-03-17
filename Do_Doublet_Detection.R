@@ -8,7 +8,7 @@ require(DoubletFinder)
 all_doublet <- list();
 
 
-for(dataset_row in 1:20) {
+for(dataset_row in 1:25) {
 
 set.seed(my_metadata_table$Seed[dataset_row])
 name <- my_metadata_table$Name[dataset_row]
@@ -24,6 +24,7 @@ myseur <- readRDS(paste(name,"Anno_SeurObj2.rds", sep="_"));
 } else {
 print("Anno Object file missing!")
 }
+if (!file.exists(paste(name, "Anno_SeurObj.rds", sep="_"))) {next;}
 
 clus_lab <- myseur@meta.data$seurat_clusters
 type_lab <- myseur@meta.data$marker_anno #fewer labels so better estimation!
