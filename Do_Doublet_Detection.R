@@ -49,8 +49,8 @@ nExp_poi <- round(rate*n_cells)
 nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
 
 #find doublets
-pN <- min(250, pN);
-pN <- max(20, pN);
+pN <- min(250/n_cells, pN);
+pN <- max(20/n_cells, pN);
 
 myseur <- doubletFinder_v3(myseur, PCs = 1:npcs, pN = pN, pK = pK, nExp = nExp_poi, reuse.pANN = FALSE, sct = T) 
 myseur <- doubletFinder_v3(myseur, PCs = 1:npcs, pN = pN, pK = pK, nExp = nExp_poi.adj, reuse.pANN = paste("pANN", pN, pK, nExp_poi, sep="_"), sct = T)
