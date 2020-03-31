@@ -62,3 +62,45 @@ test <- chisq.test(corrected_counts)
 diff <- (test$observed-test$expected)/test$expected
 
 meta <- metadata[match(colnames(diff), metadata[,1]),]
+
+# Overall = background
+all_out_mat <- matrix(-1, ncol=ncol(corrected_counts), nrow=nrow(corrected_counts))
+colnames(all_out_mat) <- colnames(corrected_counts)
+rownames(all_out_mat) <- rownames(corrected_counts)
+all_out_diff <- matrix(-1, ncol=ncol(corrected_counts), nrow=nrow(corrected_counts))
+colnames(all_out_diff) <- colnames(corrected_counts)
+rownames(all_out_diff) <- rownames(corrected_counts)
+
+ref_counts <- rowSums(corrected_counts)
+for (p in 1:ncol(corrected_counts)) {
+	diff <- corrected_counts[,p]/sum(corrected_counts[,p]) - ref_counts/sum(ref_counts)
+	all_out_diff[,p] <- diff
+	tmp_corr_count <- corrected_counts;
+	for( type_i in order(abs(diff),decreasing=T) ){
+		#significance_test
+		a <- tmp_corr_count[type_i,p]
+		b <- sum(tmp_corr_count[type_i,-p])
+		c <- sum(tmp_corr_count[-type_i, p])
+		d <- sum(tmp_corr_count[-type_i, -p])
+		out <- fisher.test(cbind(c(a,b), c(c,d)))
+		all_out_mat[type_i,p] <- out$p.value	
+		if (out$p.value < 0.05/prod(dim(corrected_counts))) {
+			tmp_corr_count[type_i,] <- rep(0, ncol(tmp_corr_count))
+		}
+	}
+}
+
+zed_score <- apply(corrected_freqs, 1, function(x){(x-mean(x))/(sd(x)/sqrt(length(x)))})
+
+p_score <- apply(zed_score,1,function(x){pnorm(abs(x), lower.tail=F)})
+
+cleaned <- zed_score
+cleaned[p_score > 10^-5] <- 0
+clean_meta <- metadata[1:20,c(1,3:5)]
+
+require("gplots")
+
+png("patient_corrected_celltype_freq_zedscores.png", width=8, height=8, units="in", res=300)
+heatmap.2(cleaned, trace="none", scale="none", mar=c(10,3),
+	col=colorRampPalette(c("magenta", "black", "yellow"))(20), symbreaks=T)
+dev.off()
