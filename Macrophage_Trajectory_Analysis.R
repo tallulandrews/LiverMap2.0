@@ -2,6 +2,8 @@ dat <- readRDS("Macrophage_analysis.rds")
 require("Seurat")
 require("destiny")
 
+set.seed(2820)
+
 dat@meta.data$Use_clusters <- dat@meta.data$Coarse_clusters
 
 
@@ -20,33 +22,38 @@ plot_propKuffer <- function(pseudotime, is.Kuffer) {
 		mean(is.Kuffer[pseudotime < x+bin_width/2 & 
 		pseudotime > x-bin_width/2])})
 	plot(pseudotime[order(pseudotime)], 100*prop_K[order(pseudotime)], 
-		type="l", lwd=2.5, xlab="Pseudotime", ylab="Kupffer cells (%)")	
+		type="l", lwd=2.5, xlab="", ylab="Kupffer cells (%)")	
 	invisible(is.Kuffer)
 }
 
 png("Macrophage_transition_pca1.png", width=6, height=6, units="in", res=50)
-DimPlot(transition, reduction="pca")
+DimPlot(transition, reduction="pca", group.by="scmap_anno2")
 pseudotime_pca <- -1*transition@reductions$pca@cell.embeddings[,2]
 dev.off()
 png("Macrophage_transition_pca2.png", width=6, height=6, units="in", res=50)
 plot_propKuffer(pseudotime_pca, is.Kuffer)
+title(xlab="Pseudotime (PC2)")
 dev.off()
 
+transition@meta.data$is.Kuffer <- is.Kuffer
+transition@meta.data$pca_pseudotime <- pseudotime_pca
 
 mat <- transition@assays$RNA@data[rownames(transition) %in% v_genes,]
 set.seed(30192)
-dm <- DiffusionMap(t(mat), n_pcs=10)
-pseudotime_dm = dm@eigenvectors[,1]*-1
+dm <- DiffusionMap(t(as.matrix(mat)), n_pcs=20, n_eigs=3)
+pseudotime_dm = dm@eigenvectors[,2]
 
-plot_propKuffer <- function(pseudotime, is.Kuffer) {
-	bin_width = diff(range(pseudotime))/50
-	prop_K = sapply(pseudotime, function(x) {
-		mean(is.Kuffer[pseudotime < x+bin_width/2 & 
-		pseudotime > x-bin_width/2])})
-	plot(pseudotime[order(pseudotime)], 100*prop_K[order(pseudotime)], 
-		type="l", lwd=2.5, xlab="Pseudotime", ylab="Kupffer cells (%)")	
-	invisible(is.Kuffer)
-}
+png("Macrophage_transition_dm1.png", width=6, height=6, units="in", res=50)
+plot(dm@eigenvectors[,1], dm@eigenvectors[,2], col=c("red", "black")[is.Kuffer+1]) 
+dev.off()
+
+png("Macrophage_transition_dm2.png", width=6, height=6, units="in", res=50)
+plot_propKuffer(pseudotime_dm, is.Kuffer)
+dev.off();
+
+transition@meta.data$dm_pseudotime <- pseudotime_dm
+saveRDS(transition, "Macrophage_transition.rds")
+
 
 
 # Monocle DE
@@ -95,10 +102,12 @@ my_rowMeans <- function(x) {
         return(x);
 }
 
+bin_width <- range(pseudotime_pca)/30
+
 smoothed_expr <- sapply(pseudotime_pca, function(x) {
 	my_rowMeans(transition@assays$RNA@data[,
-		pseudotime < x+bin_width/2 & 
-		pseudotime > x-bin_width/2])}
+		pseudotime_pca < x+bin_width/2 & 
+		pseudotime_pca > x-bin_width/2])}
 	)
 
 
