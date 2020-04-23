@@ -1,11 +1,14 @@
 require(SingleCellExperiment)
 require(scmap)
 
-map1_ref <- readRDS("/home/gelder/MacParlandLabData/human/HumanLiver1.0/scmap_reference.rds")
+#auto_anno_dir <- "/home/gelder/MacParlandLabData/human/HumanLiver1.0/";
+auto_anno_dir <- "/cluster/projects/macparland/TA/AutoAnnotation"
 
-map1_markers <- read.table("/home/gelder/MacParlandLabData/human/HumanLiver1.0/my_marker_genes.txt", header=T, stringsAsFactors=FALSE)
+map1_ref <- readRDS(paste(auto_anno_dir,"scmap_reference.rds", sep="/"))
 
-require(CellTypeProfiles)
+map1_markers <- read.table(paste(auto_anno_dir, "my_marker_genes.txt", sep="/"), header=T, stringsAsFactors=FALSE)
+
+#require(CellTypeProfiles)
 my_markers <- function(mat) {
         on_off <- matrix(0, ncol=ncol(mat), nrow=nrow(mat));
         my_split_max_gap <- function(x) {
@@ -23,25 +26,30 @@ my_markers <- function(mat) {
 
 
 run_scmap_seurat <- function(myseur, scmap_ref=map1_ref, return_sce=FALSE) {
+	# make sure raw counts and lognormalized matrices match
 	myseur@assays$RNA@counts <- myseur@assays$RNA@counts[match(rownames(myseur@assays$RNA@data), rownames(myseur@assays$RNA@counts)),]
+	# create SCE
 	mysce <- SingleCellExperiment(assays=list(counts=myseur@assays$RNA@counts, logcounts=myseur@assays$RNA@data), colData=myseur@meta.data)
 
 
 #	mysce <- as.SingleCellExperiment(myseur)
 	rowData(mysce)$feature_symbol=rownames(mysce);
 	mysce <- mysce[!grepl("^MT-", rownames(mysce)),] #remove MT genes.
-
+	mysce <- mysce[!grepl("^RPS-", rownames(mysce)),] #remove Ribo genes.
+	mysce <- mysce[!grepl("^RPL-", rownames(mysce)),] #remove Ribo genes.
+	
+#	for (i in seq(from=1, to=ncol(mysce), by=1000)) {
+#		tmp <- mysce[,seq(from=i, to=min(ncol(mysce), i+1000))]
 	# scmap_cluster
 	scmap_annotation <- scmapCluster( projection = mysce,
 		index_list = list(lm1 = metadata(map1_ref)$scmap_cluster_index), 
 		threshold=0.1)
-	mysce$scmap_id <- scmap_annotation$scmap_cluster_labs
-	mysce$scmap_score <- scmap_annotation$scmap_cluster_siml
-	mysce$scmap_id <-  scmap_annotation$scmap_cluster_labs
-	mysce$scmap_score <-  scmap_annotation$scmap_cluster_siml
+	mysce$scmap_id <- as.vector(scmap_annotation$scmap_cluster_labs)
+	mysce$scmap_score <- as.vector(scmap_annotation$scmap_cluster_siml)
 
 
-	myseur@meta.data$scmap_cluster_anno <- data.frame(id=mysce$scmap_id, similarity=mysce$scmap_score);
+	myseur@meta.data$scmap_cluster_anno <- mysce$scmap_id
+	myseur@meta.data$scmap_cluster_score <- mysce$scmap_score
 
 	# scmap_cell
 	scmap_cell_res <- scmapCell(mysce, index_list=list(lm1=metadata(map1_ref)$scmap_cell_index));
@@ -68,8 +76,8 @@ run_scmap_seurat <- function(myseur, scmap_ref=map1_ref, return_sce=FALSE) {
 	}
 }
 
-cell_anno_to_cluster_anno <- function(cellids, clusterids) {
-	tab <- table(scmap_annotation$scmap_cluster_labs, mysce$seurat_clusters)
+cell_anno_to_cluster_anno <- function(cellanno, clusterids) {
+	tab <- table(cellanno, clusterids)
 	clusterlab <-  apply(tab, 2, function(x){rownames(tab)[which(x==max(x))]})
 	return(data.frame(cluster=colnames(tab), lab=clusterlab));
 }
@@ -142,5 +150,3 @@ Use_markers_for_anno <- function(mat, clusters, ref_markers=map1_markers) {
 		cluster_assign=data.frame(cluster=names(best), label=best), 
 		cell_assign=best[match(clusters,names(best))]))
 }
-
-
