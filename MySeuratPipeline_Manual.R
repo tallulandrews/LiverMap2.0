@@ -1,30 +1,24 @@
 script_dir = "/cluster/home/tandrews/scripts/LiverMap2.0"
 auto_anno_dir = "/cluster/projects/macparland/TA/AutoAnnotation"
 source(paste(script_dir, "Setup_autoannotation.R", sep="/"))
-#source(paste(script_dir,"Setup_autoannotation.R", sep="/"))
 
 #i <- as.numeric(as.character(commandArgs(trailingOnly=TRUE)))
 i = 1
 
-my_dataset_names <- c("C66", "C68", "C69", "C70", "C72")
-seeds <- c(6228, 9013, 7738, 3172, 8224)
-folders <- c("McGilvray_Sonya__C66_Caudate", 
-		"MacParland_Sonya__C68_Total_liver", 
-		"MacParland_Sonya__human_c69_liver_19years_male_3pr_v2",
-		"C70_with_top_up_sequencing",
-		"C72")
-root_dir <-"/cluster/projects/macparland/TA/LiverMap2.0/RawData"
+Params <- read.table(paste(script_dir, "LiverMap_SampleProcessingParams.csv", sep="/"), sep=",", header=T)
 
-mt_filter <- 50
-ng_filter <- 100
-nc_filter <- 10
-nkNN <- 20
-npcs <- 20
-nhvg <- 2000
+mt_filter <- Params[i,"MTfilter"]
+ng_filter <- Params[i,"nGenefilter"]
+nc_filter <- Params[i,"nCellfilter"]
+nkNN <- Params[i, "kNN"]
+npcs <- Params[i, "nPCs"]
+nhvg <- Params[i, "nHGV"]
+this_seed <- Params[i, "Seed"]
+max_cells <- 20000
+name <- as.character(Params[i, "Name"])
+folder <- as.character(Params[i, "Directory_UHN"])
 
-set.seed(seeds[i])
-name <- my_dataset_names[i]
-folder <- paste(root_dir, folders[i], sep="/");
+set.seed(this_seed)
 #res <- 5
 res <- 3
 
@@ -35,9 +29,14 @@ require(Matrix)
 
 # Read the data
 mydata <- Read10X(data.dir = paste(folder, "filtered_gene_bc_matrices/GRCh38", sep="/"))
-mydata <- mydata[,1:1000]
-
-warning(paste(dim(mydata), "inpute dimensions of", name))
+print(paste("Stats out:", dim(mydata), "input dimensions of", name))
+# Enforce a maximum number of cells captured based on expected number.
+mydata <- mydata[,Matrix::colSums(mydata) > ng_filter]
+if (ncol(mydata) > 20000) {
+	ng_detect <- Matrix::colSums(mydata);
+	q_thresh <- quantile(ng_detect, 1-max_cells/length(ng_detect))
+	mydata <-  mydata[,ng_detect > q_thresh]
+}
 
 myseur <- CreateSeuratObject(counts = mydata, project = name, min.cells = nc_filter, min.features = ng_filter) ### <- ERROR! gene & cell filter are backwards. - Fixed on 20/04/2020
 
@@ -46,6 +45,7 @@ myseur[["percent.mt"]] <- PercentageFeatureSet(myseur, pattern = "^MT-")
 
 myseur <- subset(myseur, subset = nFeature_RNA > ng_filter & percent.mt < mt_filter)
 
+print(paste("Stats out:", dim(myseur), "seurat dimensions of", name))
 # Add metadata
 myseur@meta.data$cell_barcode <- colnames(myseur)
 myseur@meta.data$donor <- rep(name, ncol(myseur));
@@ -78,6 +78,8 @@ png(paste(name, "_default_umap.png", sep=""), width=6, height=6, units="in", res
 DimPlot(myseur, reduction = "umap")
 dev.off()
 
+print(paste("Stats out:", length(unique(myseur@meta.data$seurat_clusters)), "seurat clusters in", name))
+
 #Cell-cycle
 s.genes <- cc.genes$s.genes
 g2m.genes <- cc.genes$g2m.genes
@@ -89,14 +91,15 @@ myseur <- run_scmap_seurat(myseur, scmap_ref=map1_ref);
 
 simplify_annotations <- function(annotations) {
 	simplified <- as.character(annotations)
-	simplified[simplifed %in% c(
+	simplified[simplified %in% c(
 		"AntibodysecretingBcells", 
 		"MatureBcells")] <- "Bcells"
-	simplified[simplifed %in% c(
+	simplified[simplified %in% c(
 		"CD3abTcells", "gdTcells1", "gdTcells2")] <- "Tcells"
-	simplified[simplifed %in% c(
+	simplified[simplified %in% c(
 		"PericentralHep", "UnidentifiedHep", "PeriportalHep",
-		"interzonalHep",)] <- "Hepatocyte"
+		"interzonalHep")] <- "Hepatocyte"
+	return(simplified);
 }
 
 
