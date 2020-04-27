@@ -1,9 +1,10 @@
+require(methods)
 script_dir = "/cluster/home/tandrews/scripts/LiverMap2.0"
 auto_anno_dir = "/cluster/projects/macparland/TA/AutoAnnotation"
 source(paste(script_dir, "Setup_autoannotation.R", sep="/"))
 
-#i <- as.numeric(as.character(commandArgs(trailingOnly=TRUE)))
-i = 1
+i <- as.numeric(as.character(commandArgs(trailingOnly=TRUE)))
+#i = 1
 
 Params <- read.table(paste(script_dir, "LiverMap_SampleProcessingParams.csv", sep="/"), sep=",", header=T)
 
