@@ -1,16 +1,21 @@
 require("Seurat")
 
-liver.integrated <- readRDS("harmony_integrated.rds")
-liver.integrated <- readRDS("integration_v2.rds")
+name="harmony_integrated2_20livers"
+#liver.integrated <- readRDS("harmony_integrated.rds")
+#liver.integrated <- readRDS("integration_v2.rds")
+liver.integrated <- readRDS("All_merged_universal_genes_harmony_integrated_v2.rds")
 
 set.seed(7742)
 # Dimensionality Reduction
-require("sctransform")
+#require("sctransform")
 #liver.integrated <- ScaleData(liver.integrated);
 #liver.integrated <- RunPCA(liver.integrated, features = VariableFeatures(object = liver.integrated))
-ElbowPlot(liver.integrated)
-
 npcs <- 20
+require("ggplot2")
+png(paste(name,"pca_elbow.png", sep="_"), width=4, height=4, units="in", res=100)
+ElbowPlot(liver.integrated)+geom_vline(aes(xintercept=npcs), linetype="dotted", color="grey35", size=2)
+dev.off()
+
 
 # Cluster with many different parameters
 res <- seq(from=0.3, to=2, by=0.2)
@@ -57,7 +62,7 @@ liver.integrated@meta.data$Fine_clusters <- liver.integrated@meta.data[[fine_lvl
 
 apcluster::heatmap(res1, -1*as.matrix(clust_dists))
 
-png("compare_harmony_clusterings_heatmap.png", width=6, height=6, units="in", res=300)
+png(paste(name,"compare_clusterings_heatmap.png",sep="_"), width=6, height=6, units="in", res=300)
 lab <- matrix("", ncol=ncol(clust_table), nrow=ncol(clust_table))
 lab[colnames(clust_table)==fine_lvl, colnames(clust_table)==fine_lvl] <- "F"
 lab[colnames(clust_table)==coarse_lvl, colnames(clust_table)==coarse_lvl] <- "C"
@@ -71,62 +76,62 @@ res <- 0.9
 
 liver.integrated <- RunTSNE(liver.integrated, reduction="harmony",  dims = 1:npcs)
 liver.integrated <- RunUMAP(liver.integrated, reduction="harmony",  dims = 1:npcs, parallel=FALSE, n.neighbour=nkNN)
-png("Highres_harmony_coarse_integrated_umap.png", width=6, height=6, units="in", res=50)
+png(paste(name,"coarse_umap.png", sep="_"), width=6, height=6, units="in", res=50)
 DimPlot(liver.integrated, reduction = "umap", group.by="Coarse_clusters")
 dev.off()
-png("Highres_harmony_coarse_integrated_tsne.png", width=6, height=6, units="in", res=50)
+png(paste(name,"coarse_tsne.png",sep="_"), width=6, height=6, units="in", res=50)
 DimPlot(liver.integrated, reduction = "tsne", group.by="Coarse_clusters")
 dev.off()
-png("Highres_harmony_fine_integrated_umap.png", width=6, height=6, units="in", res=50)
+png(paste(name,"fine_umap.png", sep="_"), width=6, height=6, units="in", res=50)
 DimPlot(liver.integrated, reduction = "umap", group.by="Fine_clusters")
 dev.off()
-png("Highres_harmony_fine_integrated_tsne.png", width=6, height=6, units="in", res=50)
+png(paste(name,"fine_tsne.png", sep="_"), width=6, height=6, units="in", res=50)
 DimPlot(liver.integrated, reduction = "tsne", group.by="Fine_clusters")
 dev.off()
-png("Donor_harmony_integrated_umap.png", width=6, height=6, units="in", res=50)
+png(paste(name,"Donor_umap.png", sep="_"), width=6, height=6, units="in", res=50)
 DimPlot(liver.integrated, reduction = "umap", group.by="orig.ident")
 dev.off()
-png("Donor_harmony_integrated_tsne.png", width=6, height=6, units="in", res=50)
+png(paste(name,"Donor_tsne.png", sep="_"), width=6, height=6, units="in", res=50)
 DimPlot(liver.integrated, reduction = "tsne", group.by="orig.ident")
 dev.off()
 
-png("Coarse_harmony_clusters_by_donor.png", width=6, height=6, units="in", res=50)
-barplot(table(liver.integrated@meta.data$orig.ident, liver.integrated@meta.data$Coarse_clusters), col=rainbow(20))
-dev.off()
-png("Fine_harmony_clusters_by_donor.png", width=6, height=6, units="in", res=50)
-barplot(table(liver.integrated@meta.data$orig.ident, liver.integrated@meta.data$Fine_clusters), col=rainbow(20))
-dev.off()
+#png("Coarse_harmony_clusters_by_donor.png", width=6, height=6, units="in", res=50)
+#barplot(table(liver.integrated@meta.data$orig.ident, liver.integrated@meta.data$Coarse_clusters), col=rainbow(20))
+#dev.off()
+#png("Fine_harmony_clusters_by_donor.png", width=6, height=6, units="in", res=50)
+#barplot(table(liver.integrated@meta.data$orig.ident, liver.integrated@meta.data$Fine_clusters), col=rainbow(20))
+#dev.off()
 
 # Auto-annotation
-source("Setup_autoannotation.R")
+#source("Setup_autoannotation.R")
 
-all_anno <- readRDS("All20_automatedannotation.rds");
+#all_anno <- readRDS("All20_automatedannotation.rds");
 
-liver.integrated@meta.data$scmap_anno <- rep("unknown", ncol(liver.integrated));
-liver.integrated@meta.data$scmap_anno2 <- rep("unknown", ncol(liver.integrated));
-for (donor in unique(liver.integrated@meta.data$orig.ident)) {
-        cell_ids <- liver.integrated@meta.data$cell_barcode[liver.integrated@meta.data$donor == donor]
-        anno <- all_anno[[donor]];
-        anno <- anno[anno$cell_barcode %in% cell_ids,]
-        anno <- anno[match(cell_ids, anno$cell_barcode),]
-        liver.integrated@meta.data$scmap_anno[liver.integrated@meta.data$orig.ident == donor] <- as.character(anno$scmap_cluster_anno$lm1)
-        liver.integrated@meta.data$scmap_anno2[liver.integrated@meta.data$orig.ident == donor] <- as.character(anno$scmap_cell_anno)
-}
+#liver.integrated@meta.data$scmap_anno <- rep("unknown", ncol(liver.integrated));
+#liver.integrated@meta.data$scmap_anno2 <- rep("unknown", ncol(liver.integrated));
+#for (donor in unique(liver.integrated@meta.data$orig.ident)) {
+#        cell_ids <- liver.integrated@meta.data$cell_barcode[liver.integrated@meta.data$donor == donor]
+#        anno <- all_anno[[donor]];
+#        anno <- anno[anno$cell_barcode %in% cell_ids,]
+#        anno <- anno[match(cell_ids, anno$cell_barcode),]
+#        liver.integrated@meta.data$scmap_anno[liver.integrated@meta.data$orig.ident == donor] <- as.character(anno$scmap_cluster_anno$lm1)
+#        liver.integrated@meta.data$scmap_anno2[liver.integrated@meta.data$orig.ident == donor] <- as.character(anno$scmap_cell_anno)
+#}
 
-png("AutoAnno_harmony_integrated_umap.png", width=8, height=6, units="in", res=50)
-DimPlot(liver.integrated, reduction = "umap", group.by="scmap_anno")
-dev.off()
-png("AutoAnno_harmony_integrated_tsne.png", width=8, height=6, units="in", res=50)
-DimPlot(liver.integrated, reduction = "tsne", group.by="scmap_anno")
-dev.off()
-png("AutoAnno2_harmony_integrated_umap.png", width=8, height=6, units="in", res=50)
-DimPlot(liver.integrated, reduction = "umap", group.by="scmap_anno2")
-dev.off()
-png("AutoAnno2_harmony_integrated_tsne.png", width=8, height=6, units="in", res=50)
-DimPlot(liver.integrated, reduction = "tsne", group.by="scmap_anno2")
-dev.off()
+#png("AutoAnno_harmony_integrated_umap.png", width=8, height=6, units="in", res=50)
+#DimPlot(liver.integrated, reduction = "umap", group.by="scmap_anno")
+#dev.off()
+#png("AutoAnno_harmony_integrated_tsne.png", width=8, height=6, units="in", res=50)
+#DimPlot(liver.integrated, reduction = "tsne", group.by="scmap_anno")
+#dev.off()
+#png("AutoAnno2_harmony_integrated_umap.png", width=8, height=6, units="in", res=50)
+#DimPlot(liver.integrated, reduction = "umap", group.by="scmap_anno2")
+#dev.off()
+#png("AutoAnno2_harmony_integrated_tsne.png", width=8, height=6, units="in", res=50)
+#DimPlot(liver.integrated, reduction = "tsne", group.by="scmap_anno2")
+#dev.off()
 
-saveRDS(liver.integrated, "integration_harmony_plus_analysis.rds")
+#saveRDS(liver.integrated, "integration_harmony_plus_analysis.rds")
 
 # Would this be helpful?
 # create a heatmap where: cell = average similarity of this clustering to all other clusterings
