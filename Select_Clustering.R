@@ -96,7 +96,7 @@ lab_id <- colnames(tsne_lab_pos)
 
 
 require("ggplot2")
-new_colour_scheme <- Cell_type_colours[order(Cell_type_colours),]
+new_colour_scheme <- Cell_type_colours[order(Cell_type_colours[,1]),]
 liver.integrated@meta.data$short_cluster_anno <- factor(map_cell_types(liver.integrated@meta.data$cluster_quickanno), levels=new_colour_scheme[,1]);
 
 png("Autoanno_label_harmony_umap.png", width=7,5, height=6, units="in", res=300)
