@@ -96,5 +96,14 @@ lab_id <- colnames(tsne_lab_pos)
 
 
 require("ggplot2")
+new_colour_scheme <- Cell_type_colours[order(Cell_type_colours),]
+liver.integrated@meta.data$short_cluster_anno <- factor(map_cell_types(liver.integrated@meta.data$cluster_quickanno), levels=new_colour_scheme[,1]);
+
+png("Autoanno_label_harmony_umap.png", width=7,5, height=6, units="in", res=300)
+DimPlot(liver.integrated, reduction="umap", group.by="short_cluster_anno", pt.size=.1)+scale_color_manual(values=new_colour_scheme[,2])+annotate("text", x=umap_lab_pos[1,], y=umap_lab_pos[2,], label=lab_id, colour="grey35")
+dev.off()
+
+
 png("Autoanno_label_harmony_tsne.png", width=7,5, height=6, units="in", res=300)
+DimPlot(liver.integrated, reduction="tsne", group.by="short_cluster_anno", pt.size=.1)+scale_color_manual(values=new_colour_scheme[,2])+annotate("text", x=tsne_lab_pos[1,], y=tsne_lab_pos[2,], label=lab_id, colour="grey35")
 dev.off()
