@@ -1,6 +1,6 @@
 require("Seurat")
 
-name="harmony_integrated2_20livers"
+proj_name="harmony_integrated2_20livers"
 #liver.integrated <- readRDS("harmony_integrated.rds")
 #liver.integrated <- readRDS("integration_v2.rds")
 liver.integrated <- readRDS("All_merged_universal_genes_harmony_integrated_v2.rds")
@@ -10,36 +10,41 @@ set.seed(7742)
 #require("sctransform")
 #liver.integrated <- ScaleData(liver.integrated);
 #liver.integrated <- RunPCA(liver.integrated, features = VariableFeatures(object = liver.integrated))
-npcs <- 20
+npcs <- 15 # was 20 - 29/04/2020
 require("ggplot2")
-png(paste(name,"pca_elbow.png", sep="_"), width=4, height=4, units="in", res=100)
-ElbowPlot(liver.integrated)+geom_vline(aes(xintercept=npcs), linetype="dotted", color="grey35", size=2)
+png(paste(proj_name,"pca_elbow.png", sep="_"), width=4, height=4, units="in", res=100)
+a <- ElbowPlot(liver.integrated)+geom_vline(aes(xintercept=npcs), linetype="dotted", color="grey35", size=2)
+plot(a)
 dev.off()
 
 
 # Cluster with many different parameters
-res <- seq(from=0.3, to=2, by=0.2)
-nkNN <- seq(from=30, to=90, by=10)
+res <- seq(from=0.3, to=2, by=0.3)
+nkNN <- seq(from=40, to=80, by=10)
 
 for(res_param in res) {
 for(nkNN_param in nkNN){
 liver.integrated <- FindNeighbors(liver.integrated, reduction="harmony", dims = 1:npcs, k.param=nkNN_param)
-liver.integrated <- FindClusters(liver.integrated, reduction="harmony", resolution = res_param, k.param=nkNN_param)
+#liver.integrated <- FindClusters(liver.integrated, reduction="harmony", resolution = res_param, k.param=nkNN_param)
+liver.integrated <- FindClusters(liver.integrated, reduction="harmony", resolution = res_param, group.singletons=FALSE, method="igraph") # for UHN Seurat installation
+
 name <- paste("knn_",nkNN_param,"_res_", res_param, sep="");
 
 liver.integrated@meta.data[[name]] <- liver.integrated@meta.data$seurat_clusters;
 
 }}
 
+saveRDS(liver.integrated, paste(proj_name, "harmony_plus_clusters.rds", sep="_"))
+
 # Compare all these clusterings
 require(igraph)
 require(gplots)
-clust_table <- liver.integrated@meta.data[, grepl("^knn_", names(liver.integrated@meta.data))]
+clust_table <- liver.integrated@meta.data[, grepl("^knn_", colnames(liver.integrated@meta.data))]
 clust_table <- as.matrix(apply(clust_table,2,as.numeric))
 require("proxy")
 clust_dists <- proxy::dist(clust_table, method=function(x,y){igraph::compare(x,y,method="vi")}, by_rows=FALSE)
-clust_similr1 <- proxy::simil(clust_table, method=function(x,y){igraph::compare(x,y,method="nmi")}, by_rows=FALSE)
-clust_similr2 <- proxy::simil(clust_table, method=function(x,y){igraph::compare(x,y,method="adjusted.rand")}, by_rows=FALSE)
+#clust_similr1 <- proxy::simil(clust_table, method=function(x,y){igraph::compare(x,y,method="nmi")}, by_rows=FALSE)
+#clust_similr2 <- proxy::simil(clust_table, method=function(x,y){igraph::compare(x,y,method="adjusted.rand")}, by_rows=FALSE)
 
 
 # Find robust exemplar clustering(s)
@@ -53,8 +58,10 @@ res1 <- apcluster(-1*as.matrix(clust_dists), p=-2.5)
 
 #valid_clusterings <- res1@exemplars[which(res1@exemplars %in% res2@exemplars & res1@exemplars %in% res3@exemplars)]
 
-coarse_lvl <- "knn_70_res_0.3" # basic_integration_analysis.rds = knn_70_res_0.3
-fine_lvl <- "knn_70_res_0.9" # basic_integration_analysis.rds = knn_90_res_1.5
+coarse_lvl <- names(res1@exemplars)[2]
+fine_lvl <- names(res1@exemplars)[3]
+#coarse_lvl <- "knn_70_res_0.3" # basic_integration_analysis.rds = knn_70_res_0.3
+#fine_lvl <- "knn_70_res_0.9" # basic_integration_analysis.rds = knn_90_res_1.5
 
 #manually select which exemplar to use
 liver.integrated@meta.data$Coarse_clusters <- liver.integrated@meta.data[[coarse_lvl]] 
@@ -62,7 +69,7 @@ liver.integrated@meta.data$Fine_clusters <- liver.integrated@meta.data[[fine_lvl
 
 apcluster::heatmap(res1, -1*as.matrix(clust_dists))
 
-png(paste(name,"compare_clusterings_heatmap.png",sep="_"), width=6, height=6, units="in", res=300)
+png(paste(proj_name,"compare_clusterings_heatmap.png",sep="_"), width=6, height=6, units="in", res=300)
 lab <- matrix("", ncol=ncol(clust_table), nrow=ncol(clust_table))
 lab[colnames(clust_table)==fine_lvl, colnames(clust_table)==fine_lvl] <- "F"
 lab[colnames(clust_table)==coarse_lvl, colnames(clust_table)==coarse_lvl] <- "C"
@@ -71,34 +78,28 @@ dev.off()
 
 
 # Visualize the Chosen clusterings
-nkNN <- 70
-res <- 0.9
+#nkNN <- 70
 
-liver.integrated <- RunTSNE(liver.integrated, reduction="harmony",  dims = 1:npcs)
-liver.integrated <- RunUMAP(liver.integrated, reduction="harmony",  dims = 1:npcs, parallel=FALSE, n.neighbour=nkNN)
-png(paste(name,"coarse_umap.png", sep="_"), width=6, height=6, units="in", res=50)
+#liver.integrated <- RunTSNE(liver.integrated, reduction="harmony",  dims = 1:npcs)
+#liver.integrated <- RunUMAP(liver.integrated, reduction="harmony",  dims = 1:npcs, parallel=FALSE, n.neighbour=nkNN)
+png(paste(proj_name,"coarse_umap.png", sep="_"), width=6, height=6, units="in", res=150)
 DimPlot(liver.integrated, reduction = "umap", group.by="Coarse_clusters")
 dev.off()
-png(paste(name,"coarse_tsne.png",sep="_"), width=6, height=6, units="in", res=50)
+png(paste(proj_name,"coarse_tsne.png",sep="_"), width=6, height=6, units="in", res=150)
 DimPlot(liver.integrated, reduction = "tsne", group.by="Coarse_clusters")
 dev.off()
-png(paste(name,"fine_umap.png", sep="_"), width=6, height=6, units="in", res=50)
+png(paste(proj_name,"fine_umap.png", sep="_"), width=6, height=6, units="in", res=150)
 DimPlot(liver.integrated, reduction = "umap", group.by="Fine_clusters")
 dev.off()
-png(paste(name,"fine_tsne.png", sep="_"), width=6, height=6, units="in", res=50)
+png(paste(proj_name,"fine_tsne.png", sep="_"), width=6, height=6, units="in", res=150)
 DimPlot(liver.integrated, reduction = "tsne", group.by="Fine_clusters")
 dev.off()
-png(paste(name,"Donor_umap.png", sep="_"), width=6, height=6, units="in", res=50)
-DimPlot(liver.integrated, reduction = "umap", group.by="orig.ident")
-dev.off()
-png(paste(name,"Donor_tsne.png", sep="_"), width=6, height=6, units="in", res=50)
-DimPlot(liver.integrated, reduction = "tsne", group.by="orig.ident")
-dev.off()
 
-#png("Coarse_harmony_clusters_by_donor.png", width=6, height=6, units="in", res=50)
+saveRDS(liver.integrated, paste(proj_name, "harmony_plus_analysis.rds", sep="_"))
+#png("Coarse_harmony_clusters_by_donor.png", width=6, height=6, units="in", res=150)
 #barplot(table(liver.integrated@meta.data$orig.ident, liver.integrated@meta.data$Coarse_clusters), col=rainbow(20))
 #dev.off()
-#png("Fine_harmony_clusters_by_donor.png", width=6, height=6, units="in", res=50)
+#png("Fine_harmony_clusters_by_donor.png", width=6, height=6, units="in", res=150)
 #barplot(table(liver.integrated@meta.data$orig.ident, liver.integrated@meta.data$Fine_clusters), col=rainbow(20))
 #dev.off()
 
@@ -118,16 +119,16 @@ dev.off()
 #        liver.integrated@meta.data$scmap_anno2[liver.integrated@meta.data$orig.ident == donor] <- as.character(anno$scmap_cell_anno)
 #}
 
-#png("AutoAnno_harmony_integrated_umap.png", width=8, height=6, units="in", res=50)
+#png("AutoAnno_harmony_integrated_umap.png", width=8, height=6, units="in", res=150)
 #DimPlot(liver.integrated, reduction = "umap", group.by="scmap_anno")
 #dev.off()
-#png("AutoAnno_harmony_integrated_tsne.png", width=8, height=6, units="in", res=50)
+#png("AutoAnno_harmony_integrated_tsne.png", width=8, height=6, units="in", res=150)
 #DimPlot(liver.integrated, reduction = "tsne", group.by="scmap_anno")
 #dev.off()
-#png("AutoAnno2_harmony_integrated_umap.png", width=8, height=6, units="in", res=50)
+#png("AutoAnno2_harmony_integrated_umap.png", width=8, height=6, units="in", res=150)
 #DimPlot(liver.integrated, reduction = "umap", group.by="scmap_anno2")
 #dev.off()
-#png("AutoAnno2_harmony_integrated_tsne.png", width=8, height=6, units="in", res=50)
+#png("AutoAnno2_harmony_integrated_tsne.png", width=8, height=6, units="in", res=150)
 #DimPlot(liver.integrated, reduction = "tsne", group.by="scmap_anno2")
 #dev.off()
 
