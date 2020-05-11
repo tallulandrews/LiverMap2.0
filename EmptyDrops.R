@@ -13,9 +13,11 @@ require(dplyr)
 require(Seurat)
 script_dir = "/cluster/home/tandrews/scripts/LiverMap2.0"
 
-i <- as.numeric(as.character(commandArgs(trailingOnly=TRUE)))
+#i <- as.numeric(as.character(commandArgs(trailingOnly=TRUE)))
 #i = 1
 
+my_names <- c("EmptyDrops_C68", "EmptyDrops_C69", "EmptyDrops_C66")
+folders <- c("../MacParland_Sonya__C68_Total_liver/raw_feature_bc_matrix/", "../MacParland_Sonya__human_c69_liver_19years_male_3pr_v2/raw_feature_bc_matrix/", "../McGilvray_Sonya__C66_Caudate/raw_feature_bc_matrix/")
 
 
 #mt_filter <- Params[i,"MTfilter"]
@@ -23,8 +25,9 @@ i <- as.numeric(as.character(commandArgs(trailingOnly=TRUE)))
 #this_seed <- Params[i, "Seed"]
 #name <- paste("EmptyDrops", as.character(Params[i, "Name"]), sep="_")
 #folder <- as.character(Params[i, "Directory_UHN"])
-folder <- "../McGilvray_Sonya__C-62_Enriched_5pr/raw_feature_bc_matrix/"
-name <- "EmptyDrops_C62_5pr";
+for (i in 2:2) {
+folder <- folders[i]
+name <- my_names[i];
 
 set.seed(101)
 
@@ -75,3 +78,4 @@ dev.off()
 outdata <- mydata[,is.cell]
 print(paste("Stats out:", dim(outdata), "input dimensions of", name))
 saveRDS(outdata, paste(name, "emptyDrops_table.rds", sep="_"));
+}
