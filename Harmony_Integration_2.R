@@ -82,6 +82,7 @@ all_genes <- sort(all_genes);
 #}
 
 # Merge Datasets
+#### Merging does not merge individually scaled datasets!!
 
 merged_obj <- NULL;
 universal_genes <- c(-1)
@@ -93,7 +94,7 @@ for (i in 1:length(obj_list)) {
 		universal_genes <- as.character(rownames(obj_list[[i]]))
 	} else {
 		merged_obj <- merge(merged_obj, y=obj_list[[i]], add.cell.ids=c("", n), project="LiverMap")
-		universal_genes <- intersection(universal_genes, as.character(rownames(obj_list[[i]])))
+		universal_genes <- intersect(universal_genes, as.character(rownames(obj_list[[i]])))
 	}
 }
 
@@ -101,25 +102,27 @@ merged_obj@misc$universal_genes <- universal_genes;
 merged_obj@misc$creation_date <- date();
 saveRDS(merged_obj, "All_genes_Merged_obj_v2.rds")
 
+set.seed(9428)
 
 merged_obj <- merged_obj[rownames(merged_obj) %in% universal_genes,]
 #merged_obj <- Seurat::NormalizeData(merged_obj, verbose = FALSE)
 merged_obj <- FindVariableFeatures(merged_obj, selection.method = "vst", nfeatures = 2000)
-#merged_obj <- ScaleData(merged_obj, verbose = FALSE)
-merged_obj <- RunPCA(merged_obj, pc.genes = VariableGenes(merged_obj), npcs = 20, verbose = FALSE)
+merged_obj <- ScaleData(merged_obj, verbose = FALSE)
+#merged_obj <- RunPCA(merged_obj, pc.genes = VariableGenes(merged_obj), npcs = 20, verbose = FALSE)
+merged_obj <- RunPCA(merged_obj, pc.genes = VariableFeatures(merged_obj), npcs = 20, verbose = FALSE)
 merged_obj <- RunTSNE(merged_obj, dims = 1:10, verbose = FALSE)
 merged_obj <- RunUMAP(merged_obj, dims = 1:10, verbose = FALSE)
 
-png("merged_not_integrated_tsne.png", width=6, height =6, units="in", res=300)
+png("merged_not_integrated_tsne.png", width=9, height =6, units="in", res=300)
 DimPlot(merged_obj, reduction="tsne", group.by="donor", pt.size=0.1)
 dev.off();
-png("merged_not_integrated_umap.png", width=6, height =6, units="in", res=300)
+png("merged_not_integrated_umap.png", width=9, height =6, units="in", res=300)
 DimPlot(merged_obj, reduction="umap", group.by="donor", pt.size=0.1)
 dev.off();
-png("merged_not_integrated_tsne_autoanno.png", width=6, height =6, units="in", res=300)
+png("merged_not_integrated_tsne_autoanno.png", width=12, height =6, units="in", res=300)
 DimPlot(merged_obj, reduction="tsne", group.by="consistent_labs", pt.size=0.1)
 dev.off();
-png("merged_not_integrated_umap_autoanno.png", width=6, height =6, units="in", res=300)
+png("merged_not_integrated_umap_autoanno.png", width=12, height =6, units="in", res=300)
 DimPlot(merged_obj, reduction="umap", group.by="consistent_labs", pt.size=0.1)
 dev.off();
 
@@ -131,18 +134,18 @@ merged_obj <- RunHarmony(merged_obj, "donor", plot_convergence = TRUE)
 merged_obj <- RunUMAP(merged_obj, reduction = "harmony", dims = 1:20)
 merged_obj <- RunTSNE(merged_obj, reduction = "harmony", dims = 1:20)
 
-png("merged_harmony_integrated_umap.png", width=6, height =6, units="in", res=50)
+png("merged_harmony_integrated_umap.png", width=9, height =6, units="in", res=100)
 DimPlot(merged_obj, reduction = "umap", group.by = "donor", pt.size = .1)
 dev.off();
-png("merged_harmony_integrated_tsne.png", width=6, height =6, units="in", res=50)
+png("merged_harmony_integrated_tsne.png", width=9, height =6, units="in", res=100)
 DimPlot(merged_obj, reduction = "tsne", group.by = "donor", pt.size = .1)
 dev.off();
-png("merged_harmony_integrated_umap_autoanno.png", width=6, height =6, units="in", res=50)
+png("merged_harmony_integrated_umap_autoanno.png", width=12, height =6, units="in", res=100)
 DimPlot(merged_obj, reduction = "umap", group.by = "consistent_labs", pt.size = .1)
 dev.off();
-png("merged_harmony_integrated_tsne_autoanno.png", width=6, height =6, units="in", res=50)
+png("merged_harmony_integrated_tsne_autoanno.png", width=12, height =6, units="in", res=100)
 DimPlot(merged_obj, reduction = "tsne", group.by = "consistent_labs", pt.size = .1)
 dev.off();
-saveRDS(merged_obj, "harmony_integrated.rds");
+saveRDS(merged_obj, "All_merged_universal_genes_harmony_integrated_v2.rds");
 
 # add harmony dimensions to integrated object?

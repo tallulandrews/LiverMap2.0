@@ -90,3 +90,23 @@ get_pseudobulk <- function(mat, clusters, donors) {
 }
 
 
+# means for heatmap?
+get_pseudobulk_means <- function(mat, clusters, donors) {
+        c <- split(seq(ncol(mat)), clusters);
+        donor_freqs <- table(donors)/length(donors)
+        # avg expression per donor in this cluster
+        clust_expr <- sapply(c, function(clust) {
+                d_expr <- group_rowmeans(mat[,clust], donors[clust], type="mean");
+		colnames(d_expr) <- paste(clusters[clust[1]], colnames(d_expr), sep="_")
+                return(d_expr);
+        })
+	out <- clust_expr[[1]];
+	for (i in 2:length(clust_expr)) {
+		c_names <- c(colnames(out), colnames(clust_expr[[i]]))
+		out <- cbind(out, clust_expr[[i]]);
+		colnames(out) <- c_names
+	}
+        return(out)
+}
+
+

@@ -119,3 +119,25 @@ type_2_colour <- function(type) {
 	return(colour)
 }
 	
+simplify_annotations <- function(annotations, types=c("B", "Mac", "T", "Hep")) {
+	simplified <- as.character(annotations)
+	if ("B" %in% types) {
+	simplified[simplified %in% c(
+		"AntibodysecretingBcells", 
+		"MatureBcells")] <- "Bcells"
+	}
+	if ("Mac" %in% types) {
+	simplified[simplified %in% c(
+		"InflamatoryMacrophages", "Non-inflammatoryMacrophages")] <- "Macrophages"
+	}
+	if ("T" %in% types) {
+	simplified[simplified %in% c(
+		"CD3abTcells", "gdTcells1", "gdTcells2")] <- "Tcells"
+	}
+	if ("Hep" %in% types) {
+	simplified[simplified %in% c(
+		"PericentralHep", "UnidentifiedHep", "PeriportalHep",
+		"interzonalHep")] <- "Hepatocyte"
+	}
+	return(simplified);
+}

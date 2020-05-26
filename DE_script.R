@@ -96,10 +96,13 @@ tidy_mast_output <- function(output, this_contrast) {
 ## Pseudobulk ##
 source("~/scripts/LiverMap2.0/My_R_Scripts.R")
 
-bulks <- get_pseudobulk(obj@assays$RNA@counts, obj@meta.data$Coarse_clusters, obj@meta.data$donor)
+bulks <- get_pseudobulk(obj@assays$RNA@counts, obj@meta.data$Use_clusters, obj@meta.data$donor)
 labs <- strsplit(colnames(bulks), "_")
 c_labs <- sapply(labs, function(x){unlist(x[[1]])})
 d_labs <- sapply(labs, function(x){unlist(x[[2]])})
+
+bulks_file <- paste(args[3], "_pseudobulk_mat.rds", sep="")
+saveRDS(list(mat=bulks, cluster=c_labs, donor=d_labs), bulks_file);
 
 
 require("edgeR")
@@ -136,6 +139,12 @@ saveRDS(all_DE, paste(args[3], args[2], "_pseudobulk_DE.rds", sep="_"))
 
 exit()
 hwoiehro
+
+#######   END ########
+#######   END ########
+#######   END ########
+
+
 ### Diffcyt? ###
 require(diffcyt)
 

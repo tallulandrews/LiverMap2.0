@@ -1,4 +1,4 @@
-Sample,age,sex,BMI,Name,Directory_Gary,Directory_UHN,nHGV,nPCs,kNN,Seed,MTfilter,nGenefilter,nCellfilter, CR_cells,Kept_cells,Kept_genes,Med_Genes_per_cell,RDS_file
+Sample,age,sex,BMI,Name,Directory_Gary,Directory_UHN,nHGV,nPCs,kNN,Seed,MTfilter,nGenefilter,nCellfilter,CR_cells,Kept_cells,Kept_genes,Med_Genes_per_cell,RDS_file
 C37,44,M,30.5,C37,~/MacParlandLabData/human/TLHApr12-2017/,/cluster/projects/macparland/TA/LiverMap2.0/RawData/C37_3prV2_12Apr17,2000,20,20,1287,50,250,10,481,NA,NA,NA,""
 C39,65,M,31.7,C39,~/MacParlandLabData/human/TLHJun06-2017/,/cluster/projects/macparland/TA/LiverMap2.0/RawData/C39_3prV2_6June17,2000,20,20,3719,50,250,10,3498,NA,NA,NA,""
 C41,41,F,37.1,C41,~/MacParlandLabData/human/TLHJun29-2017/,/cluster/projects/macparland/TA/LiverMap2.0/RawData/C41_3prV2_TLH_29June17,2000,20,20,21882,50,250,10,3174,NA,NA,NA,""

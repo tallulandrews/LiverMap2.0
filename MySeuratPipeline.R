@@ -22,7 +22,7 @@ require(Matrix)
 
 # Read the data
 mydata <- Read10X(data.dir = paste(folder, "filtered_gene_bc_matrices/GRCh38", sep="/"))
-myseur <- CreateSeuratObject(counts = mydata, project = name, min.cells = ng_filter, min.features = nc_filter)
+myseur <- CreateSeuratObject(counts = mydata, project = name, min.cells = ng_filter, min.features = nc_filter) ### <- ERROR! gene & cell filter are backwards.
 
 # Mitochondrial filter
 myseur[["percent.mt"]] <- PercentageFeatureSet(myseur, pattern = "^MT-")

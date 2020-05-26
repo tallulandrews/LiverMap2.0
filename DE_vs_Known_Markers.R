@@ -5,8 +5,8 @@ cluster_names <- 1:n_clusters -1
 
 anno_genes <- read.table("Celltype_markers_Liver.csv", sep=",", header=T)
 source("~/R-Scripts/Ensembl_Stuff.R")
-anno_genes$human <- General_Map(as.character(anno_genes[,1]), in.org="Mmus", in.name="symbol", out.org="Hsap", out.name="symbol")
-anno_genes$human[anno_genes$Species == "Human"] <- anno_genes$Gene[anno_genes$Species == "Human"]
+anno_genes$human <- as.character(General_Map(as.character(anno_genes[,1]), in.org="Mmus", in.name="symbol", out.org="Hsap", out.name="symbol"))
+anno_genes$human[anno_genes$Species == "Human"] <- as.character(anno_genes$Gene[anno_genes$Species == "Human"])
 
 output_list <- list();
 
