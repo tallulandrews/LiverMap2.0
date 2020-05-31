@@ -23,7 +23,7 @@ tmp_file <- paste(name, "doublet_tmp.rds", sep="_")
 
 print(name);
 
-#if(!file.exists(tmp_file)) {
+if(!file.exists(tmp_file)) {
 
 if (file.exists(paste(name,"Anno_SeurObj.rds", sep="_"))) {
 myseur <- readRDS(paste(name,"Anno_SeurObj.rds", sep="_"));
@@ -71,13 +71,13 @@ anno_tab <- myseur@meta.data
 rownames(anno_tab) <- paste(anno_tab$orig.ident, anno_tab$cell_barcode, sep="_")
 saveRDS(anno_tab, tmp_file)
 all_doublet[[name]] <- anno_tab;
-#} else {
-#anno_tab <- readRDS(tmp_file)
+} else {
+anno_tab <- readRDS(tmp_file)
 
 
-#all_doublet[[name]] <- anno_tab;
+all_doublet[[name]] <- anno_tab;
 
-#}
+}
 }
 
 saveRDS(all_doublet, "All20_doubletDetection.rds");
