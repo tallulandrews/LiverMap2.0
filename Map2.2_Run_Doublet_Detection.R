@@ -63,7 +63,7 @@ myseur <- doubletFinder_v3(myseur, PCs = 1:npcs, pN = pN, pK = pK, nExp = nExp_p
 
 tmp <- ncol(myseur@meta.data)
 myseur@meta.data$doublet_score <- myseur@meta.data[,tmp-1]
-myseur@meta.data$DF_assignment <- mysuer@meta.data[,tmp]
+myseur@meta.data$DF_assignment <- myseur@meta.data[,tmp]
 
 myseur@meta.data$cell_barcode <- colnames(myseur);
 anno_tab <- myseur@meta.data
@@ -80,7 +80,7 @@ all_doublet[[name]] <- anno_tab;
 }
 }
 
-saveRDS(all_doublet, "All20_doubletDetection.rds");
+saveRDS(all_doublet, "All20_doubletDetection2.rds");
 
 
 
