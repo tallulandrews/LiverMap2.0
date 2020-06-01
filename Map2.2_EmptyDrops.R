@@ -13,37 +13,42 @@ require(dplyr)
 require(Seurat)
 script_dir = "/cluster/home/tandrews/scripts/LiverMap2.0"
 
-#i <- as.numeric(as.character(commandArgs(trailingOnly=TRUE)))
-#i = 1
+args <- as.numeric(as.character(commandArgs(trailingOnly=TRUE)))
+# folder of raw data
+# name of project
+# max cells
+# min cells
+folder <- args[1]
+name <- args[2];
+if (length(args) < 4) {
+	n_min_cells <- 100
+	if (length(args) < 3){
+		n_max_cells <- 20000
+	} else {
+		n_max_cells <- args[3];
+	}
+} else {
+	n_max_cells <- args[3];
+	n_min_cells <- args[4];
+}
 
-my_names <- c("EmptyDrops_C68", "EmptyDrops_C69", "EmptyDrops_C66")
-folders <- c("../MacParland_Sonya__C68_Total_liver/raw_feature_bc_matrix/", "../MacParland_Sonya__human_c69_liver_19years_male_3pr_v2/raw_feature_bc_matrix/", "../McGilvray_Sonya__C66_Caudate/raw_feature_bc_matrix/")
+FDR=0.01
 
-
-#mt_filter <- Params[i,"MTfilter"]
-#nc_filter <- Params[i,"nCellfilter"]
-#this_seed <- Params[i, "Seed"]
-#name <- paste("EmptyDrops", as.character(Params[i, "Name"]), sep="_")
-#folder <- as.character(Params[i, "Directory_UHN"])
-for (i in 2:2) {
-folder <- folders[i]
-name <- my_names[i];
-
-set.seed(101)
-
-n_max_cells <- 20000
-n_min_cells <- 100
-
-
+# Read the raw matrix
 mydata <- Read10X(data.dir = paste(folder, sep="/"))
+# Remove rows & columns that are completely zero
 mydata <- mydata[,Matrix::colSums(mydata) > 0]
 mydata <- mydata[Matrix::rowSums(mydata) > 0,]
-print(paste("Stats out:", dim(mydata), "input dimensions of", name))
+print(paste("Stats out:", dim(outdata), "input dimensions of", name), collapse=" ")
+
+# Rank droplet barcodes by total UMIs
 br.out <- barcodeRanks(mydata)
 
+# Get total UMIs that correspond to the min & max thresholds.
 plausible_cell_threshold <- max(br.out$total[br.out$rank > n_max_cells]);
 mandatory_cell_threshold <- max(br.out$total[br.out$rank < n_min_cells]);
 
+# Knee and Inflection point plot
 #plot(br.out$rank, br.out$total, log="xy", xlab="Rank", ylab="Total")
 #o <- order(br.out$rank)
 #lines(br.out$rank[o], br.out$fitted[o], col="red")
@@ -55,27 +60,30 @@ mandatory_cell_threshold <- max(br.out$total[br.out$rank < n_min_cells]);
 
 
 set.seed(100)
+# Run EmptyDrops
 e.out <- emptyDrops(mydata, lower=max(plausible_cell_threshold, min(br.out$knee, br.out$inflection)), niters=100000, ignore=3, retain=mandatory_cell_threshold)
 
-e.out <- e.out[!is.na(e.out$PValue),]
+# Clean up results
+e.out <- e.out[!is.na(e.out$PValue),] # Remove NAs (too few UMIs to estimate PValue)
 e.out$q.value <- e.out$PValue;
-e.out$q.value[e.out$Limited] <- 0;
-e.out$q.value <- p.adjust(e.out$q.value, method="fdr");
+e.out$q.value[e.out$Limited] <- 0; # Set those with p < 1/n_simulations to p = 0 to ensure they are kept after multiple testing correction
+e.out$q.value <- p.adjust(e.out$q.value, method="fdr"); # apply FDR multiple testing correction.
 
+# Get number of detected genes/droplet
 mydata <- mydata[,match(rownames(e.out),colnames(mydata))]
 e.out$ngenes <- Matrix::colSums(mydata>0);
-e.out$q.value[e.out$Limited] <- 0;
 
-
-is.cell <- e.out$q.value <= 0.01
+# Significance threshold
+is.cell <- e.out$q.value <= FDR
 sum(is.cell, na.rm=TRUE)
 
+# Plot of selected genes
 png(paste(name, "emptyDrops.png", sep="_"), width=6, height=6, units="in", res=150)
 plot(e.out$Total, -e.out$LogProb, col=ifelse(is.cell, "red", "black"),
     xlab="Total UMI count", ylab="-Log Probability")
 dev.off()
 
+# Subset the matrix to the selected droplets and save it to a file.
 outdata <- mydata[,is.cell]
-print(paste("Stats out:", dim(outdata), "input dimensions of", name))
+print(paste("Stats out:", dim(outdata), "output dimensions of", name), collapse=" ")
 saveRDS(outdata, paste(name, "emptyDrops_table.rds", sep="_"));
-}
