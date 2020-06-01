@@ -39,7 +39,7 @@ mydata <- Read10X(data.dir = paste(folder, sep="/"))
 # Remove rows & columns that are completely zero
 mydata <- mydata[,Matrix::colSums(mydata) > 0]
 mydata <- mydata[Matrix::rowSums(mydata) > 0,]
-print(paste("Stats out:", dim(outdata), "input dimensions of", name), collapse=" ")
+print(paste("Stats out:", dim(mydata), "input",c("gene","cells"), "of", name))
 
 # Rank droplet barcodes by total UMIs
 br.out <- barcodeRanks(mydata)
@@ -85,5 +85,5 @@ dev.off()
 
 # Subset the matrix to the selected droplets and save it to a file.
 outdata <- mydata[,is.cell]
-print(paste("Stats out:", dim(outdata), "output dimensions of", name), collapse=" ")
+print(paste("Stats out:", dim(outdata), "output",c("gene","cells"), "of", name))
 saveRDS(outdata, paste(name, "emptyDrops_table.rds", sep="_"));
