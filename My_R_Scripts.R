@@ -77,13 +77,25 @@ get_pseudobulk <- function(mat, clusters, donors) {
         # avg expression per donor in this cluster
         clust_expr <- sapply(c, function(clust) {
                 d_expr <- group_rowmeans(mat[,clust], donors[clust], type="sum");
-		colnames(d_expr) <- paste(clusters[clust[1]], colnames(d_expr), sep="_")
+		if(is.null(dim(d_expr))) {
+			l <- sapply(d_expr, length)
+			keep <- which(l == nrow(mat))
+			d_expr <- matrix(d_expr[[keep]], ncol=length(keep), byrow=FALSE);
+			rownames(d_expr) <- rownames(mat);
+			colnames(d_expr) <- paste(clusters[clust[1]], levels(donors)[keep], sep="_")
+		} else {
+			colnames(d_expr) <- paste(clusters[clust[1]], colnames(d_expr), sep="_")
+		}
                 return(d_expr);
         })
 	out <- clust_expr[[1]];
 	for (i in 2:length(clust_expr)) {
 		c_names <- c(colnames(out), colnames(clust_expr[[i]]))
 		out <- cbind(out, clust_expr[[i]]);
+		if (is.null(dim(out))){
+			out <- matrix(out, ncol=1)
+			rownames(out) <- rownames(mat)
+		}
 		colnames(out) <- c_names
 	}
         return(out)
