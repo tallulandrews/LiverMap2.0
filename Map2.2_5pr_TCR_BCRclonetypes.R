@@ -7,12 +7,21 @@ loc_file <- read.delim("/cluster/home/tandrews/scripts/LiverMap2.0/TCR_BCR_clone
 MAX_CELLS=25000
 MIN_CELLS=100
 
-i = 1;
+i = 3;
+
+tcrs_exist=TRUE
+bcrs_exist=TRUE
+if (loc_file[i, "TCR_file"] == "X") tcrs_exist=FALSE;
+if (loc_file[i, "BCR_file"] == "X") bcrs_exist=FALSE;
 
 name=loc_file[i,1]
 # Read and TCRs & BCRs
+if(tcrs_exist){
 tcrs <- read.delim(loc_file[i,"TCR_file"], sep=",", header=T)
+}
+if(bcrs_exist){
 bcrs <- read.delim(loc_file[i,"BCR_file"], sep=",", header=T)
+}
 
 # Read raw mat and tidy
 filt <- Read10X(loc_file[i,"X5pr_filtdir"])
@@ -30,13 +39,21 @@ umi_per_barcode <- Matrix::colSums(raw_mat)
 
 # get lower threshold for cells
 plausible_cell_threshold <- max(br.out$total[br.out$rank > MAX_CELLS]);
+if (tcrs_exist) {
 t_cell_threshold <- quantile(umi_per_barcode[colnames(raw_mat) %in% tcrs[,1]], 0.25)
+} else {t_cell_threshold=max(umi_per_barcode)}
+if (bcrs_exist) {
 b_cell_threshold <- quantile(umi_per_barcode[colnames(raw_mat) %in% bcrs[,1]], 0.25)
+} else {b_cell_threshold=max(umi_per_barcode)};
 lower_threshold = min(plausible_cell_threshold, t_cell_threshold, b_cell_threshold)
 # get higher threshold for cells
 mandatory_cell_threshold <- max(br.out$total[br.out$rank < MIN_CELLS]);
+if (tcrs_exist) {
 t_cell_threshold <- min(umi_per_barcode[colnames(raw_mat) %in% tcrs[tcrs$high_confidence=="True" & tcrs$is_cell == "True",1]])
+} else {t_cell_threshold=max(umi_per_barcode)}
+if (bcrs_exist) {
 b_cell_threshold <- min(umi_per_barcode[colnames(raw_mat) %in% bcrs[bcrs$high_confidence=="True" & bcrs$is_cell=="True",1]])
+} else {b_cell_threshold=max(umi_per_barcode)};
 higher_threshold = min(mandatory_cell_threshold)
 
 # Run EmptyDrops to try to clean up while allowing more permissive thershold to keep tcrs and bcrs
@@ -53,8 +70,16 @@ e.out$q.value <- p.adjust(e.out$q.value, method="fdr"); # apply FDR multiple tes
 
 keep_cells <- rownames(e.out)[e.out$q.value < 0.01]
 filt_mat <- raw_mat[,match(keep_cells, colnames(raw_mat))]
+if (tcrs_exist){
 tcr_meta <- tcrs[tcrs$barcode %in% keep_cells,]
+} else {
+tcr_meta <- list()
+}
+if (bcrs_exist) {
 bcr_meta <- bcrs[bcrs$barcode %in% keep_cells,]
+} else {
+bcr_meta <- list()
+}
 
 # Can't turn tcrs into a metadata table b/c more than one TCR/cell...
 
