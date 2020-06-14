@@ -1,3 +1,7 @@
+# These are all tested and debugged.
+
+# Wrapper for rowMeans to ensure using a version appropriate
+#   for sparse matrices, and allowing for only one row or column
 my_rowMeans <- function(x) {
         if (!is.null(ncol(x))) {
                 if (ncol(x) > 1) {
@@ -6,6 +10,8 @@ my_rowMeans <- function(x) {
         }
         return(x);
 }
+# Wrapper for rowSums to ensure using a version appropriate
+#   for sparse matrices, and allowing for only one row or column
 my_rowSums <- function(x) {
         if (!is.null(ncol(x))) {
                 if (ncol(x) > 1) {
@@ -14,6 +20,8 @@ my_rowSums <- function(x) {
         }
         return(x);
 }
+# Wrapper for colMeans to ensure using a version appropriate
+#   for sparse matrices, and allowing for only one row or column
 my_colMeans <- function(x) {
         if (!is.null(nrow(x))) {
                 if (nrow(x) > 1) {
@@ -22,6 +30,8 @@ my_colMeans <- function(x) {
         }
         return(x);
 }
+# Wrapper for colSums to ensure using a version appropriate
+#   for sparse matrices, and allowing for only one row or column
 my_colSums <- function(x) {
         if (!is.null(nrow(x))) {
                 if (nrow(x) > 1) {
@@ -31,6 +41,7 @@ my_colSums <- function(x) {
         return(x);
 }
 
+# Row means or row sums by groups.
 group_rowmeans <- function(MAT, group_labs, type=c("mean","sum")) {
         d <- split(seq(ncol(MAT)), group_labs);
 	if (type[1] == "mean") {
@@ -40,6 +51,8 @@ group_rowmeans <- function(MAT, group_labs, type=c("mean","sum")) {
 	} 
         return(mus);
 }
+
+# Col means or col sums by groups.
 group_colmeans <- function(MAT, group_labs, type=c("mean", "sum")) {
         d <- split(seq(nrow(MAT)), group_labs);
 	if (type[1] == "mean") {
@@ -50,7 +63,12 @@ group_colmeans <- function(MAT, group_labs, type=c("mean", "sum")) {
         return(mus);
 }
 
-# Average expression per cluster per donor, optional- weight by donor freqs
+# Average expression of a matrix by cluster avoiding biases due
+# due to different numbers of cells by donor across clusters.
+#
+# - default weights expression by the overall frequency of donors 
+#   across the whole dataset
+# setting weight to FALSE gives equal weight to each donor.
 get_rel_expression <- function(mat, clusters, donors, weight=TRUE) {
         c <- split(seq(ncol(mat)), clusters);
         donor_freqs <- table(donors)/length(donors)
@@ -70,7 +88,8 @@ get_rel_expression <- function(mat, clusters, donors, weight=TRUE) {
         return(clust_expr)
 }
 
-# Table of mean expression of cells from each donor in each cluster - for DE
+# Table of total expression of cells from each donor in each cluster 
+#  - for edgeR
 get_pseudobulk <- function(mat, clusters, donors) {
         c <- split(seq(ncol(mat)), clusters);
         donor_freqs <- table(donors)/length(donors)
@@ -101,8 +120,8 @@ get_pseudobulk <- function(mat, clusters, donors) {
         return(out)
 }
 
-
-# means for heatmap?
+# Table of mean expression of cells from each donor in each cluster 
+#   - for heatmap
 get_pseudobulk_means <- function(mat, clusters, donors) {
         c <- split(seq(ncol(mat)), clusters);
         donor_freqs <- table(donors)/length(donors)
