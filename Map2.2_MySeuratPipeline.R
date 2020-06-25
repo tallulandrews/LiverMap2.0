@@ -98,6 +98,8 @@ myseur <- CellCycleScoring(myseur, s.features = s.genes, g2m.features=g2m.genes,
 
 # AutoAnnotation with scmap
 myseur <- run_scmap_seurat(myseur, scmap_ref=map1_ref);
+marker_anno <- Use_markers_for_anno(myseur, myseur$seurat_clusters, scmap_ref=map1_ref);
+
 
 simplify_annotations <- function(annotations) {
 	simplified <- as.character(annotations)
@@ -124,4 +126,7 @@ myseur@meta.data$consistent_labs[inconsistent] <- general_labs[inconsistent]
 
 
 saveRDS(myseur, paste(name,"Anno_SeurObj.rds", sep="_"));
+
+# SoupX
+require("SoupX")
 

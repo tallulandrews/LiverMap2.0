@@ -1,6 +1,7 @@
 require(SingleCellExperiment)
 require(scmap)
 
+source("~/scripts/LiverMap2.0/My_R_Scripts.R")
 #auto_anno_dir <- "/home/gelder/MacParlandLabData/human/HumanLiver1.0/";
 auto_anno_dir <- "/cluster/projects/macparland/TA/AutoAnnotation"
 
@@ -87,11 +88,11 @@ cell_anno_to_cluster_anno <- function(cellanno, clusterids) {
 
 Use_markers_for_anno <- function(mat, clusters, ref_markers=map1_markers) {
 	# get average expression by cluster
-	cluster_means <- my_row_mean_aggregate(mat, clusters);
+	cluster_means <- group_rowmeans(mat, clusters);
 	# get % detect by cluster
 	tmp <- mat;
 	tmp[tmp>0] <-1;
-	cluster_detect <- my_row_mean_aggregate(tmp, clusters);
+	cluster_detect <- group_rowmeans(tmp, clusters);
 
 	# get markers based on the maximum jump between clusters.
 	mark_mean <- my_markers(cluster_means);
