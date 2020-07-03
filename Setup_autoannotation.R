@@ -16,6 +16,9 @@ my_markers <- function(mat) {
                 x <- sort(x)
                 jumps <- diff(x);
                 br_pt <- which(jumps == max(jumps))
+		if (length(br_pt) > 1) {
+			br_pt <- br_pt[length(br_pt)]
+		}
                 return(c(x[br_pt], max(jumps)));
         }
         thresh <- apply(mat, 1, my_split_max_gap);
