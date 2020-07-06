@@ -85,6 +85,7 @@ cell_anno_to_cluster_anno <- function(cellanno, clusterids) {
 	clusterlab <-  apply(tab, 2, function(x){
 		out <- rownames(tab)[which(x==max(x))]
 		if (length(out) > 1) {out <- "ambiguous"}
+		return(out);
 		})
 	return(data.frame(cluster=colnames(tab), lab=clusterlab));
 }
