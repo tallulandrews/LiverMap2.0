@@ -18,9 +18,10 @@ require(Seurat)
 script_dir = "/cluster/home/tandrews/scripts/LiverMap2.0"
 source(paste(script_dir, "My_R_Scripts.R", sep="/"));
 
-args <- as.numeric(as.character(commandArgs(trailingOnly=TRUE)))
+args <- as.character(commandArgs(trailingOnly=TRUE))
 folder <- args[1]
 name <- args[2];
+print(args);
 #maximum number of plausible cells
 if (length(args) < 3) { 
 	MAX_CELLS <- 20000 
@@ -41,7 +42,7 @@ if (length(args) < 5) {
 }
 # completely exclude droplets below this threshold
 if (length(args) < 6) {
-	TRIM=3
+	TRIM=10
 } else {
 	TRIM <- args[6]
 }
@@ -74,10 +75,29 @@ mandatory_cell_threshold <- max(br.out$total[br.out$rank < MIN_CELLS]);
 #legend("bottomleft", lty=2, col=c("dodgerblue", "forestgreen"), 
 #    legend=c("knee", "inflection"))
 
+# My calling threshold
+n_umi_sorted <- br.out$total[order(br.out$total, decreasing = T)]
+rank_sorted <- 1:length(n_umi_sorted);
+
+slope <- diff(log(n_umi_sorted))/diff(log(rank_sorted))
+smooth_slope <- smooth.spline(slope, spar=0.5)
+inflection <- which(smooth_slope$y == min(smooth_slope$y[MIN_CELLS:MAX_CELLS]))
+my_inflection <- n_umi_sorted[inflection];
+
+
+
+
+if (br.out$knee > MIN_CELLS*10 || br.out$inflection > MIN_CELLS*10) {
+	is_empty_threshold = max(plausible_cell_threshold, 
+				br.out$total[br.out$knee], 
+				br.out$total[br.out$inflection], my_inflection)
+} else {
+	is_empty_threshold = plausible_cell_threshold
+}
 
 set.seed(100)
 # Run EmptyDrops
-e.out <- emptyDrops(mydata, lower=max(plausible_cell_threshold, min(br.out$knee, br.out$inflection)), niters=100000, ignore=3, retain=mandatory_cell_threshold)
+e.out <- emptyDrops(mydata, lower=is_empty_threshold, niters=100000, ignore=TRIM, retain=mandatory_cell_threshold)
 
 # Clean up results
 e.out <- e.out[!is.na(e.out$PValue),] # Remove NAs (too few UMIs to estimate PValue)
