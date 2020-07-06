@@ -82,7 +82,10 @@ run_scmap_seurat <- function(myseur, scmap_ref=map1_ref, return_sce=FALSE) {
 
 cell_anno_to_cluster_anno <- function(cellanno, clusterids) {
 	tab <- table(cellanno, clusterids)
-	clusterlab <-  apply(tab, 2, function(x){rownames(tab)[which(x==max(x))]})
+	clusterlab <-  apply(tab, 2, function(x){
+		out <- rownames(tab)[which(x==max(x))]
+		if (length(out) > 1) {out <- "ambiguous"}
+		})
 	return(data.frame(cluster=colnames(tab), lab=clusterlab));
 }
 
