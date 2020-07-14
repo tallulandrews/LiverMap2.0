@@ -156,10 +156,10 @@ simplify_annotations <- function(annotations) {
 		"AntibodysecretingBcells", 
 		"MatureBcells", "B_cells", "any_B_cell", "Anti_B")] <- "Bcells"
 	simplified[simplified %in% c(
-		"CD3abTcells", "gdTcells1", "gdTcells2", "gd_T_1", "gd_T_2")] <- "Tcells"
+		"CD3abTcells", "gdTcells1", "gdTcells2", "gd_T_1", "gd_T_2", "CD3_T")] <- "Tcells"
 	simplified[simplified %in% c(
 		"PericentralHep", "UnidentifiedHep", "PeriportalHep",
-		"interzonalHep", "Hep")] <- "Hepatocyte"
+		"interzonalHep", "Hep", "PortalHep2", "PortaHep1", "PortHep", "CentralHep1", "CentralHep")] <- "Hepatocyte"
 	return(map_cell_types(simplified));
 }
 
@@ -241,16 +241,16 @@ myseur <- readRDS(paste(name, out_tag, "SoupX.rds", sep="_"))
 }
 
 
-myseur <- do_annotation(myseur)
-orig_labels <- myseur@meta.data
+#myseur <- do_annotation(myseur)
+#orig_labels <- myseur@meta.data
 
-labels <- list(orig=orig_labels)
-
+labels <- list()
 agreement <- c()
+myseur@assays$Orig_Counts <- myseur@assays$RNA@counts
 
 # Compare autoannotation across corrections.
 if (length(myseur@assays) >1) {
-	for (i in 1:length(myseur@assays)) {
+	for (i in 2:length(myseur@assays)) {
 		myseur@assays$RNA@counts <- myseur@assays[[i]]
 		myseur <- Seurat::NormalizeData(myseur);
 		myseur <- Seurat::ScaleData(myseur);
