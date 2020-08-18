@@ -7,6 +7,9 @@ my_rowMeans <- function(x) {
                 if (ncol(x) > 1) {
                         return(Matrix::rowMeans(x))
                 }
+		if (ncol(x) == 0) {
+			return(rep(NA, nrow(x)));
+		}
         }
         return(x);
 }
@@ -17,6 +20,9 @@ my_rowSums <- function(x) {
                 if (ncol(x) > 1) {
                         return(Matrix::rowSums(x))
                 }
+		if (ncol(x) == 0) {
+			return(rep(NA, nrow(x)));
+		}
         }
         return(x);
 }
@@ -27,6 +33,9 @@ my_colMeans <- function(x) {
                 if (nrow(x) > 1) {
                         return(Matrix::colMeans(x))
                 }
+		if (nrow(x) == 0) {
+			return(rep(NA, ncol(x)));
+		}
         }
         return(x);
 }
@@ -37,6 +46,9 @@ my_colSums <- function(x) {
                 if (nrow(x) > 1) {
                         return(Matrix::colSums(x))
                 }
+		if (nrow(x) == 0) {
+			return(rep(NA, ncol(x)));
+		}
         }
         return(x);
 }
