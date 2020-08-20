@@ -26,7 +26,7 @@ if (! (a1 & a2 & a3 & a4 & a5 & a6 & a7 & a8) ) {
 
 script_dir = "/cluster/home/tandrews/scripts/LiverMap2.0"
 source(paste(script_dir, "My_R_Scripts.R", sep="/"));
-
+source("/cluster/home/tandrews/R-Scripts/Ensembl_Stuff.R"); #Map gene names
 ## Auto Annotation Stuff ##
 # Colour Scheme #
 source(paste(script_dir, "Colour_Scheme.R", sep="/"))
@@ -60,6 +60,8 @@ option_list <- list(
         help="Directory of raw unfiltered cell ranger UMI counts (required)"),
     make_option(c("-o", "--out_prefix"), default="Cleaned_output",
         help="prefix for output files [default %default]"),
+    make_option(c("--organism"), default="Human",
+        help="Organism, currently supported: [Human, Mouse, Rat]"),
     make_option(c("-M", "--max_cells"), type="integer", default=20000,
         help="Maximum number of plausible cells [default %default]",
         metavar="number"),
@@ -83,7 +85,7 @@ option_list <- list(
     make_option(c("--npcs"), default=20,
         help="number of principal components to use [default %default]"),
     make_option(c("--kNN"), default=20,
-        help="k used for the nearest neighbour network [default %default]")
+        help="k used for the nearest neighbour network [default %default]"),
     make_option(c("--res"), default=1,
         help="Resolution used for Seurat clustering [default %default]")
     )
@@ -94,14 +96,20 @@ print(OPTS)
 
 rawdata <- Read10X(data.dir = OPTS$input_dir)
 # Remove rows & columns that are completely zero
-rawdata <- mydata[,Matrix::colSums(mydata) > OPTS$trim]
-rawdata <- mydata[Matrix::rowSums(mydata) > 0,]
+rawdata <- rawdata[,Matrix::colSums(rawdata) > OPTS$trim]
+rawdata <- rawdata[Matrix::rowSums(rawdata) > 0,]
 print(paste("Raw Data:", dim(rawdata), "input",c("gene","cells"), "of", OPTS$out_prefix))
+
+# fixed edgecase when fewer droplets pass trim threshold than 
+# specified for minimum plausible cells (20Aug2020)
+if( ncol(rawdata) < OPTS$max_cells) {
+	OPTS$max_cells <- ncol(rawdata) - 2;
+}
 
 # Rank droplet barcodes by total UMIs
 br.out <- barcodeRanks(rawdata)
 
-# Get total UMIs that correspond to the min & max thresholds.
+## Get total UMIs that correspond to the min & max thresholds.
 plausible_cell_threshold <- max(br.out$total[br.out$rank > OPTS$max_cells]);
 mandatory_cell_threshold <- max(br.out$total[br.out$rank < OPTS$min_cells]);
 
@@ -110,19 +118,30 @@ n_umi_sorted <- br.out$total[order(br.out$total, decreasing = T)]
 rank_sorted <- 1:length(n_umi_sorted);
 
 slope <- diff(log(n_umi_sorted))/diff(log(rank_sorted))
-smooth_slope <- smooth.spline(slope, spar=0.5)
-inflection <- which(smooth_slope$y == min(smooth_slope$y[MIN_CELLS:MAX_CELLS]))
+spar = 0.5
+inflection = OPTS$min_cells
+while(inflection == OPTS$min_cells) { 
+	smooth_slope <- smooth.spline(slope, spar=spar) # changed to 0.4 from 0.5 on 19Aug202
+	inflection <- which(smooth_slope$y == min(smooth_slope$y[OPTS$min_cells:OPTS$max_cells]))
+	spar=spar*0.8
+}
+spar = spar/0.8;
 my_inflection <- n_umi_sorted[inflection];
 
 is_empty_threshold = max(plausible_cell_threshold, 
-			br.out$total[br.out$knee], 
-			br.out$total[br.out$inflection], my_inflection)
-if (is_empty_threshold < OPTS$min_cells*10){
-	is_empty_threshold = plausible_cell_threshold
+			br.out$knee, 
+			br.out$inflection, my_inflection)
+# fixed the comparison below on 19 Aug2020
+if (is_empty_threshold > n_umi_sorted[OPTS$min_cells*10]){
+	if (is.finite(plausible_cell_threshold)) {
+		is_empty_threshold = plausible_cell_threshold
+	} else {
+		is_empty_threshold = min(br.out$knee, br.out$inflection)
+	}
 }
 
 # Threshold Plot
-png(paste(OPTS$out_prefix, "inflection_points.png", width=4, height=4, units="in", res=50)
+png(paste(OPTS$out_prefix, "inflection_points.png", sep="_"), width=4, height=4, units="in", res=50)
 plot(br.out$rank, br.out$total, log="xy", xlab="Rank", ylab="Total")
 o <- order(br.out$rank)
 lines(br.out$rank[o], br.out$fitted[o], col="red")
@@ -134,8 +153,11 @@ legend("bottomleft", lty=2, lwd=2, c("knee", "inflection", "log-inflection", "em
 dev.off()
 
 
-set.seed(100)
+
+########### Begin if init seurat output file exists
+#if (!file.exists(paste(OPTS$out_prefix, "EmptyOnly.rds", sep="_"))) {
 # Run EmptyDrops
+set.seed(100)
 e.out <- emptyDrops(rawdata, lower=is_empty_threshold, niters=100000, ignore=OPTS$trim, retain=mandatory_cell_threshold)
 
 # Clean up results
@@ -156,22 +178,57 @@ dev.off()
 
 # Subset the matrix to the selected droplets and save it to a file.
 # Get number of detected genes/droplet
-rawdata <- rawdata[,match(rownames(e.out),colnames(rawdata))]
-emptymat <- rawdata[,is.cell]
+emptymat <- rawdata[,match(rownames(e.out),colnames(rawdata))]
+emptymat <- emptymat[,is.cell]
 
 print(paste("EmptyDrops :", dim(emptymat), "output",c("gene","cells"), "of", OPTS$out_prefix))
 
 ############### Quick Seurat Pipeline ##############
 set.seed(8478)
 
-myseur <- Seurat::CreateSeuratObject(counts = rawdata, project = OPTS$out_prefix, min.cells = OPTS$cells, min.features = OPTS$genes) 
+myseur <- Seurat::CreateSeuratObject(counts = emptymat, project = OPTS$out_prefix, min.cells = OPTS$cells, min.features = OPTS$genes) 
 
 # Mitochondrial filter
-myseur[["percent.mt"]] <- Seurat::PercentageFeatureSet(myseur, pattern = "^MT-")
+myseur[["percent.mt"]] <- Seurat::PercentageFeatureSet(myseur, pattern = "^MT-", )
+if (sum(myseur[["percent.mt"]]) == 0) {
+	myseur[["percent.mt"]] <- Seurat::PercentageFeatureSet(myseur, pattern = "^mt-", ) # Rat
+}
+if (sum(myseur[["percent.mt"]]) == 0) {
+	myseur[["percent.mt"]] <- Seurat::PercentageFeatureSet(myseur, pattern = "^Mt-", ) # Mouse
+}
 
 myseur <- subset(myseur, subset = nFeature_RNA > OPTS$genes & percent.mt < OPTS$mt)
 
 print(paste("Seurat :", dim(myseur),  "output",c("gene","cells"), "of", OPTS$out_prefix))
+
+# Remap Genes using Orthologs
+rename_genes <- function(myseur, new_names, old_names) {
+	new_names[new_names==""] <- old_names[new_names==""]
+	new_names[duplicated(new_names)] <- old_names[duplicated(new_names)]
+	rownames(myseur@assays$RNA@counts) <- new_names
+	if (nrow(myseur@assays$RNA@data)==length(new_names)) {
+		rownames(myseur@assays$RNA@data) <- new_names
+	}
+	if (nrow(myseur@assays$RNA@scale.data)==length(new_names)) {
+		rownames(myseur@assays$RNA@scale.data) <- new_names
+	}
+	return(myseur)
+}
+	
+genes <- rownames(myseur)
+myseur[["RNA"]][["origID"]] <- genes
+raw_genes <- rownames(rawdata) # fix gene ID to remove hypens like Seurat does.
+raw_genes <- sub("_","-", raw_genes)
+rownames(rawdata) <- raw_genes
+if (OPTS$organism == "Mouse") {
+	hgenes <- General_Map(genes, in.org="Mmus", out.org="Hsap", in.name="symbol", out.name="symbol")
+	myseur <- rename_genes(myseur, hgenes, genes)
+}
+if (OPTS$organism == "Rat") {
+	hgenes <- General_Map(genes, in.org="Rat", out.org="Hsap", in.name="symbol", out.name="symbol")
+	myseur <- rename_genes(myseur, hgenes, genes)
+}
+
 
 # Add metadata
 myseur@meta.data$cell_barcode <- colnames(myseur)
@@ -179,6 +236,9 @@ myseur@meta.data$donor <- rep(OPTS$out_prefix, ncol(myseur));
 myseur@meta.data$cell_ID <- paste(myseur@meta.data$donor, myseur@meta.data$cell_barcode, sep="_");
 
 orig.meta.data <- myseur@meta.data;
+#}
+###### End if init seurat doesn't exist
+
 
 print("Seurat Pipeline")
 run_seurat_pipeline <- function(myseur, out_tag) {
@@ -236,44 +296,50 @@ run_seurat_pipeline <- function(myseur, out_tag) {
 	new_colour_scheme <- new_colour_scheme[new_colour_scheme[,1] %in% myseur@meta.data$marker_labs,]
 	
 	png(paste(OPTS$out_prefix, out_tag, "_markanno_umap.png", sep="_"), width=6, height=6, units="in", res=100)
-	DimPlot(myseur, reduction="umap", group.by="marker_labs", pt.size=.1)+scale_color_manual(values=new_colour_scheme[,2])+annotate("text", x=umap_lab_pos[1,], y=umap_lab_pos[2,], label=colnames(umap_lab_pos), colour="grey35")
+	print(DimPlot(myseur, reduction="umap", group.by="marker_labs", pt.size=.1)+scale_color_manual(values=new_colour_scheme[,2])+annotate("text", x=umap_lab_pos[1,], y=umap_lab_pos[2,], label=colnames(umap_lab_pos), colour="grey35"))
 	dev.off()
 
 	# General QC Plots
 	png(paste(OPTS$out_prefix, out_tag, "_default_umap.png", sep="_"), width=6, height=6, units="in", res=100)
-	Seurat::DimPlot(myseur, reduction = "umap")
+	print(Seurat::DimPlot(myseur, reduction = "umap"))
 	dev.off()
 
 	png(paste(OPTS$out_prefix, out_tag, "perMT.png", sep="_"), width=6, height=6, units="in", res=150)
-	Seurat::FeaturePlot(myseur, "percent.mt", reduction="umap")
+	print(Seurat::FeaturePlot(myseur, "percent.mt", reduction="umap"))
 	dev.off()
 	png(paste(OPTS$out_prefix, out_tag, "nFeature.png", sep="_"), width=6, height=6, units="in", res=150)
-	Seurat::FeaturePlot(myseur, "nFeature_RNA", reduction="umap")
+	print(Seurat::FeaturePlot(myseur, "nFeature_RNA", reduction="umap"))
 	dev.off()
 	png(paste(OPTS$out_prefix, out_tag, "CCphase.png", sep="_"), width=6, height=6, units="in", res=150)
-	Seurat::DimPlot(myseur, group.by="Phase", reduction="umap")
+	print(Seurat::DimPlot(myseur, group.by="Phase", reduction="umap"))
 	dev.off()
 
 	png(paste(OPTS$out_prefix, out_tag, "MarkerGenes.png", sep="_"), width=6, height=6, units="in", res=150)
-	Seurat::FeaturePlot(myseur, features=c("ALB","CYP3A4", "SCD", "MARCO", "LYZ", "CD68", "IGKC", "TRAC", "PTPRC"))
+	print(Seurat::FeaturePlot(myseur, features=c("ALB","CYP3A4", "SCD", "MARCO", "LYZ", "CD68", "IGKC", "TRAC", "PTPRC")))
 	dev.off()
 
 	return(myseur)
 }
+
+#if (!file.exists(paste(OPTS$out_prefix, "EmptyOnly.rds", sep="_"))) {
 myseur <- run_seurat_pipeline(myseur, "initSeurat");
 
 saveRDS(myseur, paste(OPTS$out_prefix, "EmptyOnly.rds", sep="_"));
+
+#} else {
+#myseur <- readRDS(paste(OPTS$out_prefix, "EmptyOnly.rds", sep="_"));
+#}
 ############## SoupX ##############
 
 SoupX_outfile <- paste(OPTS$out_prefix, "SoupX.rds", sep="_")
 # SoupX
 require("Seurat")
-set.seed(this_seed)
+set.seed(4671)
 # Create SoupX object
-rawdata <- rawdata[rownames(rawdata) %in% rownames(myseur),]
+rawdata <- rawdata[match(unlist(myseur[["RNA"]][["origID"]]), rownames(rawdata)),]
 keep_cells <- colnames(myseur);
-tot_umi <- Matrix::colSums(raw);
-tot_is_cell <- min(tot_umi[colnames(raw) %in% colnames(myseur)])
+tot_umi <- Matrix::colSums(rawdata);
+tot_is_cell <- min(tot_umi[colnames(rawdata) %in% colnames(myseur)])
 raw_is_cell <- rawdata[,keep_cells]
 myseur <- myseur[,match(colnames(raw_is_cell), colnames(myseur))]
 
@@ -293,9 +359,20 @@ non_expressed_gene_list = list(HB =c("HBB", "HBA1", "HBA"),
 				Clot=c("F10", "F5", "F9", "F7", "FGB"), 
 				Bile=c("SLC10A1", "SLC01B1", "SLCO1B3", "SLC22A1", "SLC22A7", 
 					"ABCB1", "ABCB11", "ABCB4", "ABCC3", "ABCC6"));
+#Jawaria - 7Aug2020
+#non_expressed_gene_list = list(HB =c("HBB", "HBA1", "HBA"), 
+#				TCR=c("TRAC", "TRBC1", "TRBC2", "TRDC", "TRGC1", "TRGC2"), 
+#				Drug=c("CYP2E1", "CYP3A7", "CYP2A7", "CYP2A6", "CYP2B6", "CYP2C8"), 
+#				BCR=c("IGKC", "IGHE", "IGHM", "IGLC1", "IGLC3", "IGLC2"), 
+#				Clot=c("F10", "F5", "F9", "F7", "FGB", "FGG", "FGL1"), 
+#				Bile=c("SLC10A1", "SLC01B1", "SLCO1B3", "SLC22A1", "SLC22A7", 
+#					"ABCB1", "ABCB11", "ABCB4", "ABCC3", "ABCC6"),
+#				Lipid=c("APOC1", "APOC3", "APOA2", "APOA1", "APOE", "APOH"));
 non_expressed_gene_list <- lapply(non_expressed_gene_list, function(x){return(x[x %in% rownames(myseur)])})
+size <- unlist(lapply(non_expressed_gene_list, length))
+non_expressed_gene_list<-non_expressed_gene_list[size > 3]
 
-useToEst = estimateNonExpressingCells(sc, nonExpressedGeneList = non_expressed_gene_list, clusters=NULL)
+useToEst = estimateNonExpressingCells(sc, nonExpressedGeneList = non_expressed_gene_list, clusters=myseur$seurat_clusters)
 sc = calculateContaminationFraction(sc, non_expressed_gene_list, useToEst = useToEst, cellSpecificEstimates=TRUE)
 quantile(sc$metaData$rho)
 
