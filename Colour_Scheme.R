@@ -1,3 +1,26 @@
+## Map Subtypes to general cell-type labels ##
+simplify_annotations <- function(annotations, types=c("B", "Mac", "T", "Hep")) {
+	simplified <- as.character(annotations)
+	if ("B" %in% types) {
+	simplified[simplified %in% c(
+		"AntibodysecretingBcells", 
+		"MatureBcells", "B_cells", "any_B_cell", "Anti_B")] <- "Bcells"
+	}
+	if ("Mac" %in% types) {
+	simplified[simplified %in% c(
+		"InflamatoryMacrophages", "Non-inflammatoryMacrophages")] <- "Macrophages"
+	}
+	if ("T" %in% types) {
+	simplified[simplified %in% c(
+		"CD3abTcells", "gdTcells1", "gdTcells2", "gd_T_1", "gd_T_2", "CD3_T")] <- "Tcells"
+	}
+	if ("Hep" %in% types) {
+	simplified[simplified %in% c(
+		"PericentralHep", "UnidentifiedHep", "PeriportalHep",
+		"interzonalHep", "Hep", "PortalHep2", "PortaHep1", "PortHep", "CentralHep1", "CentralHep")] <- "Hepatocyte"
+	}
+	return(simplified);
+}
 
 Cell_type_colours <- rbind(
 	c("ambiguous", "#7F7F7F"), #grey50
@@ -8,7 +31,7 @@ Cell_type_colours <- rbind(
 	c("interHep", "#0868ac"),
 	c("CentralHep", "#2b8cbe"),
 	c("Stellate", "#fec44f"),
-	c("Cholangiocytes", "#ec7014"),
+	c("Cholangiocyte", "#ec7014"),
 	c("Portalendo", "#993494"),
 	c("Macrophage", "#377eb8"), # bright blue
 	c("NonInfMac", "#377eb8"),
@@ -18,12 +41,14 @@ Cell_type_colours <- rbind(
 	c("gdTcells2", "#00441b"),
 	c("CD3abTcells", "#4daf4a"),
 	c("Bcell", "#f781bf"), #violet
-	c("AntiBcell", "#756bb1"), #violet
-	c("MatBcell", "#bcbddc"), #violet
+        c("AntiBcell", "#f78abf"), #violet
+        c("MatBcell", "#6a51a3"), #violet
 	c("NKcells", "#a65628"),
 	c("LSECs", "#ffff33"),
 	c("cvLSECs", "#ff7f00"),
 	c("PortalLSECs", "#4d004b"))
+
+colnames(Cell_type_colours) <- c("type", "colour")
 
 
 map_cell_types <- function(types) {
@@ -114,60 +139,27 @@ map_cell_types <- function(types) {
 	
 
 
-Cell_type_colours <- rbind(
-	c("ambiguous", "#7F7F7F"), #grey50
-	c("Eryth", "#8B0000"), #darkred
-	c("Hepatocyte", "#e41a1c"), #bright red
-	c("OtherHep", "#e41a1c"), #bright red
-	c("PortalHep", "#084081"),
-	c("interHep", "#0868ac"),
-	c("CentralHep", "#2b8cbe"),
-	c("Stellate", "#fec44f"),
-	c("Cholangiocyte", "#ec7014"),
-	c("Portalendo", "#993494"),
-	c("Macrophage", "#377eb8"), # bright blue
-	c("NonInfMac", "#377eb8"),
-	c("InfMac", "#41b6c4"),
-	c("Tcell", "#4daf4a"), #green
-	c("gdTcells1", "#41ae76"),
-	c("gdTcells2", "#00441b"),
-	c("CD3abTcells", "#4daf4a"),
-	c("Bcell", "#f781bf"), #violet
-	c("AntiBcell", "#f78abf"), #violet
-	c("MatBcell", "#6a51a3"), #violet
-	c("NKcells", "#a65628"),
-	c("LSECs", "#ffff33"),
-	c("cvLSECs", "#ff7f00"),
-	c("PortalLSECs", "#4d004b"))
-colnames(Cell_type_colours) <- c("type", "colour")
-
-
-
 type_2_colour <- function(type) {
 	type <- as.character(map_cell_types(type))
 	colour <- Cell_type_colours[match(type, Cell_type_colours[,"type"]),"colour"]
 	return(colour)
 }
-	
-simplify_annotations <- function(annotations, types=c("B", "Mac", "T", "Hep")) {
-	simplified <- as.character(annotations)
-	if ("B" %in% types) {
-	simplified[simplified %in% c(
-		"AntibodysecretingBcells", 
-		"MatureBcells")] <- "Bcells"
+
+
+Type_DimPlot <- function(myseur, type_col="consistent_labs", reduction="umap", cluster_col="seurat_clusters") {
+	require(ggplot2)
+	agg_coord_by_cluster <- function(coords, clusters) {
+		x <- split(seq(nrow(coords)), clusters)
+		result <- sapply(x, function(a) apply(coords[a,],2,median))
+		return(result)
 	}
-	if ("Mac" %in% types) {
-	simplified[simplified %in% c(
-		"InflamatoryMacrophages", "Non-inflammatoryMacrophages")] <- "Macrophages"
-	}
-	if ("T" %in% types) {
-	simplified[simplified %in% c(
-		"CD3abTcells", "gdTcells1", "gdTcells2")] <- "Tcells"
-	}
-	if ("Hep" %in% types) {
-	simplified[simplified %in% c(
-		"PericentralHep", "UnidentifiedHep", "PeriportalHep",
-		"interzonalHep")] <- "Hepatocyte"
-	}
-	return(simplified);
+
+	umap_lab_pos <- agg_coord_by_cluster(Reductions(myseur, reduction)@cell.embeddings, myseur@meta.data[,cluster_col])
+
+	# UMAP + Ref scmap anno
+	new_colour_scheme <- Cell_type_colours[order(Cell_type_colours[,1]),]
+	myseur@meta.data$consistent_labs <- map_cell_types(myseur@meta.data[,type_col])
+	new_colour_scheme <- new_colour_scheme[new_colour_scheme[,1] %in% myseur@meta.data[,type_col],]
+
+	DimPlot(myseur, reduction=reduction, group.by=type_col, pt.size=.1)+scale_color_manual(values=new_colour_scheme[,2])+annotate("text", x=umap_lab_pos[1,], y=umap_lab_pos[2,], label=colnames(umap_lab_pos), colour="grey35")
 }
