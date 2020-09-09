@@ -1,7 +1,8 @@
 require(Seurat)
 require(stringr)
 
-files <- Sys.glob("/cluster/projects/macparland/TA/LiverMap2.0/RawData/Analysis/SoupX/*_SoupX.rds")
+files <- Sys.glob("/cluster/projects/macparland/TA/LiverMap2.0/RawData/Analysis/EmptyDrops/SoupX/*emptyDrops_table_SeurObj_SoupX.rds")
+PREFIX = "SoupXEmpty"; # SoupX = CR+SoupX
 
 merged_obj <- NULL;
 universal_genes <- c(-1)
@@ -14,9 +15,13 @@ for (i in 1:length(files)) {
         obj <- readRDS(files[i]);
 
 	soupcorrect <- obj@assays$SoupCorrected
+	#soupcorrect <- obj@assays$RNA@counts
+	#soupcorrect <- obj@assays$My_Corrected
 	# Delete unnecessary
 	obj@assays <- list(RNA=obj@assays$RNA);
 	
+	soupcorrect <- soupcorrect[!is.na(rownames(soupcorrect)),]
+	obj <- obj[rownames(obj) %in% rownames(soupcorrect),]
 	obj <- obj[match(rownames(soupcorrect), rownames(obj)),]
 	obj <- obj[, match(colnames(soupcorrect), colnames(obj))]
 	
@@ -76,6 +81,9 @@ for (i in 1:length(files)) {
 merged_obj@misc$universal_genes <- universal_genes;
 merged_obj@misc$creation_date <- date();
 
+print(PREFIX)
+print(dim(merged_obj))
+saveRDS(merged_obj, paste(PREFIX, "merged_obj.rds", sep="_"))
 
 # Quick Cluster
 res=1
@@ -111,9 +119,9 @@ overall <- rowSums(tab)
 cluster_simp <- apply(tab, 2, simpson)
 all_simp <- simpson(overall)
 
-png("SoupX_merged_barplot.png", width=5, height=5, units="in", res=150)
+png(paste(PREFIX,"merged_barplot.png", sep="_"), width=5, height=5, units="in", res=150)
 barplot(c(all_simp, cluster_simp), names=c("all", as.character(1:ncol(tab))), xlab="cluster", ylab="Simpson diversity", main="");
 dev.off()
 
-print(overall)
+print(all_simp)
 print(mean(cluster_simp));

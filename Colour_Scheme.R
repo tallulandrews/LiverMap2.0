@@ -1,3 +1,21 @@
+# Function to get the same colours as used by default in Seurat DimPlot
+get_seurat_colours <- function(obj, group.by) {
+	require(scales)
+	identities <- obj@meta.data[,group.by]
+	if (class(identities) != "factor") {
+		identities <- factor(identities)
+	}
+	identities <- levels(identities)
+
+	my_color_palette <- hue_pal()(length(identities))
+	return(my_color_palette)
+#usage:
+# TSNEPlot(object = object, do.return = T) + 
+# scale_color_manual(values = my_color_palette)
+
+}
+
+
 ## Map Subtypes to general cell-type labels ##
 simplify_annotations <- function(annotations, types=c("B", "Mac", "T", "Hep")) {
 	simplified <- as.character(annotations)

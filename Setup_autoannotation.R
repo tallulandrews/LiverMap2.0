@@ -1,13 +1,28 @@
 require(SingleCellExperiment)
 require(scmap)
+require(SCINA)
 
-source("~/scripts/LiverMap2.0/My_R_Scripts.R")
+source("/cluster/home/tandrews/scripts/LiverMap2.0/My_R_Scripts.R")
 #auto_anno_dir <- "/home/gelder/MacParlandLabData/human/HumanLiver1.0/";
 auto_anno_dir <- "/cluster/projects/macparland/TA/AutoAnnotation"
 
 map1_ref <- readRDS(paste(auto_anno_dir,"scmap_reference.rds", sep="/"))
 
 map1_markers <- read.table(paste(auto_anno_dir, "my_marker_genes.txt", sep="/"), header=T, stringsAsFactors=FALSE)
+
+types <- unique(map1_markers[,2])
+types <- types[types != "None"]
+map1_markers_list <- list();
+for (t in types) {
+	map1_markers_list[[t]]<-map1_markers[map1_markers[,2] == t,1]
+}
+
+run_SCINA <- function(mat, marker_list=map1_markers_list) {
+	# SLOW-ish
+	c_rate <- max(0.99, 1-10/ncol(mat));
+	results <- SCINA::SCINA(mat, marker_list, max_iter=100, convergence_n=4, convergence_rate=c_rate, sensitivity_cutoff=0.05, allow_unknown=1)
+	
+}
 
 #require(CellTypeProfiles)
 my_markers <- function(mat) {
@@ -90,15 +105,12 @@ cell_anno_to_cluster_anno <- function(cellanno, clusterids) {
 	return(data.frame(cluster=colnames(tab), lab=clusterlab));
 }
 
-
-
-
 Use_markers_for_anno <- function(mat, clusters, ref_markers=map1_markers) {
 	# get average expression by cluster
 	cluster_means <- group_rowmeans(mat, clusters);
 	# get % detect by cluster
 	tmp <- mat;
-	tmp[tmp>0] <-1;
+	tmp[tmp>0] <- 1;
 	cluster_detect <- group_rowmeans(tmp, clusters);
 
 	# get markers based on the maximum jump between clusters.
@@ -139,6 +151,7 @@ Use_markers_for_anno <- function(mat, clusters, ref_markers=map1_markers) {
 		xs <- colSums(tab[ref[,2] == lab,])
 		ks <- colSums(tab);
 		ps <- sapply(1:length(ks), function(i){phyper(xs[i], n_lab, N-n_lab, ks[i], lower.tail=FALSE)});
+		ps[ks==0] <- 1;
 		result <- rbind(result, ps);
 		c_lab <- c(c_lab, lab);
 	}

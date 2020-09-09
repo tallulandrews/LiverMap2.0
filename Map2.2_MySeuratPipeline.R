@@ -1,9 +1,46 @@
 require(methods)
 script_dir = "/cluster/home/tandrews/scripts/LiverMap2.0"
 auto_anno_dir = "/cluster/projects/macparland/TA/AutoAnnotation"
+
+## Auto Annotation Stuff##
+source(paste(script_dir, "Colour_Scheme.R", sep="/"))
+simplify_annotations <- function(annotations) {
+        simplified <- as.character(annotations)
+        simplified[simplified %in% c(
+                "AntibodysecretingBcells",
+                "MatureBcells", "B_cells", "any_B_cell", "Anti_B")] <- "Bcells"
+        simplified[simplified %in% c(
+                "CD3abTcells", "gdTcells1", "gdTcells2", "gd_T_1", "gd_T_2", "CD3_T")] <- "Tcells"
+        simplified[simplified %in% c(
+                "PericentralHep", "UnidentifiedHep", "PeriportalHep",
+                "interzonalHep", "Hep", "PortalHep2", "PortaHep1", "PortHep", "CentralHep1", "CentralHep")] <- "Hepatocyte"
+        return(map_cell_types(simplified));
+}
+
+do_annotation <- function(myseur) {
+
+        myseur <- run_scmap_seurat(myseur, scmap_ref=map1_ref);
+        marker_anno <- Use_markers_for_anno(myseur@assays$RNA@data, myseur$seurat_clusters);
+
+
+
+        general_labs <- simplify_annotations(myseur@meta.data$scmap_cell_anno)
+        general_labs2 <- simplify_annotations(myseur@meta.data$scmap_cluster_anno)
+        general_labs[general_labs != general_labs2] <- "ambiguous"
+        general_labs[general_labs == "unassigned"] <- "ambiguous"
+        myseur@meta.data$general_labs <- general_labs;
+        inconsistent <- myseur@meta.data$scmap_cell_anno != myseur@meta.data$scmap_cluster_anno;
+        myseur@meta.data$consistent_labs <- as.character(myseur@meta.data$scmap_cell_anno);
+        myseur@meta.data$consistent_labs[inconsistent] <- as.character(general_labs[inconsistent]);
+        myseur@meta.data$marker_labs <- as.character(marker_anno$cell_assign)
+        myseur@meta.data$marker_general_labs <- simplify_annotations(as.character(marker_anno$cell_assign))
+        return(myseur)
+}
+
 source(paste(script_dir, "Setup_autoannotation.R", sep="/"))
 
 args <- as.character(commandArgs(trailingOnly=TRUE))
+
 Params <- read.table(paste(script_dir, "LiverMap_SampleProcessingParams.csv", sep="/"), sep=",", header=T)
 
 if (grepl("rds", args[1])) {
@@ -18,11 +55,14 @@ this_seed <- 101
 max_cells <- 20000
 
 file = args[1]
-f <- unlist(strsplit(file, "[_\\.]"))
+f <- unlist(strsplit(file, "/"))
+f <- f[length(f)]
+
+f <- unlist(strsplit(f, "[_\\.]"))
 name <- paste(f[1:(length(f)-3)], collapse="_");
 rds <- file
 out_tag = paste(c(f[(length(f)-2):(length(f)-1)], "SeurObj"), collapse="_")
-folder <- Params[Params$Name==name,"Directory_UHN"]
+folder <- as.character(Params[Params$Name==name,"Directory_UHN"])
 
 } else {
 
@@ -51,6 +91,7 @@ set.seed(this_seed)
 # chanaged on 13-07-2020
 res <- 1
 
+print("Read Data")
 
 require(dplyr)
 require(Seurat)
@@ -99,6 +140,7 @@ if (grepl("emptyDrops", rds)) {
 }
 
 
+print("Seurat Pipeline")
 # sctransform normalization
 #require("sctransform")
 #norm <- sctransform::vst(Matrix(myseur@assays$RNA@counts), res_clip_range=c(-Inf, Inf), method="nb_fast");
@@ -119,28 +161,6 @@ myseur <- Seurat::FindClusters(myseur, resolution = res, k.param=nkNN)
 # Visualization with TSNE & UMAP
 myseur <- Seurat::RunTSNE(myseur, dims = 1:npcs)
 myseur <- Seurat::RunUMAP(myseur, dims = 1:npcs, parallel=FALSE)
-png(paste(name, out_tag, "_default_tsne.png", sep="_"), width=6, height=6, units="in", res=100)
-Seurat::DimPlot(myseur, reduction = "tsne")
-dev.off()
-png(paste(name, out_tag, "_default_umap.png", sep="_"), width=6, height=6, units="in", res=100)
-Seurat::DimPlot(myseur, reduction = "umap")
-dev.off()
-
-
-png(paste(name, out_tag, "perMT.png", sep="_"), width=6, height=6, units="in", res=150)
-Seurat::FeaturePlot(seur_obj, "percent.mt", reduction="umap")
-dev.off()
-png(paste(name, out_tag, "nFeature.png", sep="_"), width=6, height=6, units="in", res=150)
-Seurat::FeaturePlot(seur_obj, "nFeature_RNA", reduction="umap")
-dev.off()
-png(paste(name, out_tag, "CCphase.png", sep="_"), width=6, height=6, units="in", res=150)
-Seurat::DimPlot(seur_obj, group.by="Phase", reduction="umap")
-dev.off()
-png(paste(name, out_tag, "sample.png", sep="_"), width=6, height=6, units="in", res=150)
-Seurat::DimPlot(seur_obj, group.by="sample", reduction="umap")
-dev.off()
-
-print(paste("Stats out:", length(unique(myseur@meta.data$seurat_clusters)), "seurat clusters in", name))
 
 #Cell-cycle
 s.genes <- cc.genes$s.genes
@@ -148,51 +168,68 @@ g2m.genes <- cc.genes$g2m.genes
 
 myseur <- Seurat::CellCycleScoring(myseur, s.features = s.genes, g2m.features=g2m.genes, set.ident=TRUE)
 
+
 # AutoAnnotation with scmap
-source(paste(script_dir, "Colour_Scheme.R", sep="/"))
-simplify_annotations <- function(annotations) {
-	simplified <- as.character(annotations)
-	simplified[simplified %in% c(
-		"AntibodysecretingBcells", 
-		"MatureBcells", "B_cells", "any_B_cell", "Anti_B")] <- "Bcells"
-	simplified[simplified %in% c(
-		"CD3abTcells", "gdTcells1", "gdTcells2", "gd_T_1", "gd_T_2", "CD3_T")] <- "Tcells"
-	simplified[simplified %in% c(
-		"PericentralHep", "UnidentifiedHep", "PeriportalHep",
-		"interzonalHep", "Hep", "PortalHep2", "PortaHep1", "PortHep", "CentralHep1", "CentralHep")] <- "Hepatocyte"
-	return(map_cell_types(simplified));
-}
-
-do_annotation <- function(myseur) {
-
-	myseur <- run_scmap_seurat(myseur, scmap_ref=map1_ref);
-	marker_anno <- Use_markers_for_anno(myseur@assays$RNA@data, myseur$seurat_clusters);
-
-
-
-	general_labs <- simplify_annotations(myseur@meta.data$scmap_cell_anno)
-	general_labs2 <- simplify_annotations(myseur@meta.data$scmap_cluster_anno)
-	general_labs[general_labs != general_labs2] <- "ambiguous"
-	general_labs[general_labs == "unassigned"] <- "ambiguous"
-	myseur@meta.data$general_labs <- general_labs;
-	inconsistent <- myseur@meta.data$scmap_cell_anno != myseur@meta.data$scmap_cluster_anno;
-	myseur@meta.data$consistent_labs <- as.character(myseur@meta.data$scmap_cell_anno);
-	myseur@meta.data$consistent_labs[inconsistent] <- as.character(general_labs[inconsistent]);
-	myseur@meta.data$marker_labs <- as.character(marker_anno$cell_assign)
-	myseur@meta.data$marker_general_labs <- simplify_annotations(as.character(marker_anno$cell_assign))
-	return(myseur)
-}
-
 myseur <- do_annotation(myseur)
-
-}
 
 saveRDS(myseur, paste(name,"_",out_tag, ".rds", sep=""));
 } else {
 myseur <- readRDS( paste(name,"_",out_tag, ".rds", sep=""));
 }
 
-if (!file.exists(paste(name, out_tag, "SoupX.rds", sep="_"))) {
+print(paste("Stats out:", length(unique(myseur@meta.data$seurat_clusters)), "seurat clusters in", name))
+
+##### Make plots ####
+agg_coord_by_cluster <- function(coords, clusters) {
+	x <- split(seq(nrow(coords)), clusters)
+	result <- sapply(x, function(a) apply(coords[a,],2,median))
+	return(result)
+}
+
+umap_lab_pos <- agg_coord_by_cluster(myseur@reductions$umap@cell.embeddings, myseur@meta.data$seurat_clusters)
+
+require("ggplot2")
+require("Seurat")
+
+# UMAP + Ref scmap anno
+new_colour_scheme <- Cell_type_colours[order(Cell_type_colours[,1]),]
+myseur@meta.data$consistent_labs <- map_cell_types(myseur@meta.data$consistent_labs)
+new_colour_scheme <- new_colour_scheme[new_colour_scheme[,1] %in% myseur@meta.data$consistent_labs,]
+
+png(paste(name, out_tag, "_refanno_umap.png", sep="_"), width=6, height=6, units="in", res=100)
+DimPlot(myseur, reduction="umap", group.by="consistent_labs", pt.size=.1)+scale_color_manual(values=new_colour_scheme[,2])+annotate("text", x=umap_lab_pos[1,], y=umap_lab_pos[2,], label=colnames(umap_lab_pos), colour="grey35")
+dev.off()
+
+
+# UMAP + Marker scmap anno
+
+new_colour_scheme <- Cell_type_colours[order(Cell_type_colours[,1]),]
+myseur@meta.data$marker_labs <- map_cell_types(myseur@meta.data$marker_labs)
+new_colour_scheme <- new_colour_scheme[new_colour_scheme[,1] %in% myseur@meta.data$marker_labs,]
+
+png(paste(name, out_tag, "_markanno_umap.png", sep="_"), width=6, height=6, units="in", res=100)
+DimPlot(myseur, reduction="umap", group.by="marker_labs", pt.size=.1)+scale_color_manual(values=new_colour_scheme[,2])+annotate("text", x=umap_lab_pos[1,], y=umap_lab_pos[2,], label=colnames(umap_lab_pos), colour="grey35")
+dev.off()
+
+png(paste(name, out_tag, "_default_umap.png", sep="_"), width=6, height=6, units="in", res=100)
+Seurat::DimPlot(myseur, reduction = "umap")
+dev.off()
+
+png(paste(name, out_tag, "perMT.png", sep="_"), width=6, height=6, units="in", res=150)
+Seurat::FeaturePlot(myseur, "percent.mt", reduction="umap")
+dev.off()
+png(paste(name, out_tag, "nFeature.png", sep="_"), width=6, height=6, units="in", res=150)
+Seurat::FeaturePlot(myseur, "nFeature_RNA", reduction="umap")
+dev.off()
+png(paste(name, out_tag, "CCphase.png", sep="_"), width=6, height=6, units="in", res=150)
+Seurat::DimPlot(myseur, group.by="Phase", reduction="umap")
+dev.off()
+png(paste(name, out_tag, "sample.png", sep="_"), width=6, height=6, units="in", res=150)
+Seurat::DimPlot(myseur, group.by="donor", reduction="umap")
+dev.off()
+
+SoupX_outfile <- paste(paste("SoupX/", name, sep=""), out_tag, "SoupX.rds", sep="_")
+if (!file.exists(SoupX_outfile)) {
 # SoupX
 ## Need to make the EmptyDrops version of this!!!
 require("SoupX")
@@ -235,9 +272,9 @@ out = adjustCounts(sc)
 out <- out[,match(colnames(myseur), colnames(out))]
 
 myseur@assays$SoupCorrected <- out;
-saveRDS(myseur, paste(name, out_tag, "SoupX.rds", sep="_"));
+saveRDS(myseur, SoupX_outfile);
 } else {
-myseur <- readRDS(paste(name, out_tag, "SoupX.rds", sep="_"))
+myseur <- readRDS(SoupX_outfile)
 }
 
 
@@ -249,9 +286,15 @@ agreement <- c()
 myseur@assays$Orig_Counts <- myseur@assays$RNA@counts
 
 # Compare autoannotation across corrections.
-if (length(myseur@assays) >1) {
+if (length(myseur@assays) >2) {
 	for (i in 2:length(myseur@assays)) {
-		myseur@assays$RNA@counts <- myseur@assays[[i]]
+		this_corr_mat <- myseur@assays[[i]]
+		myseur<- myseur[rownames(myseur) %in% rownames(this_corr_mat),]
+		myseur<- myseur[, colnames(myseur) %in% colnames(this_corr_mat)]
+		this_corr_mat <- this_corr_mat[match(rownames(myseur), rownames(this_corr_mat)),]
+		this_corr_mat <- this_corr_mat[,match(colnames(myseur), colnames(this_corr_mat))]
+		
+		myseur@assays$RNA@counts <- this_corr_mat
 		myseur <- Seurat::NormalizeData(myseur);
 		myseur <- Seurat::ScaleData(myseur);
 		myseur <- do_annotation(myseur);
@@ -275,10 +318,12 @@ if (length(myseur@assays) >1) {
 		score <- sum(myseur@meta.data[is.lab,"general_labs"] == myseur@meta.data[is.lab,"marker_general_labs"])/sum(is.lab)
 		agreement[corr_name] <- score;
 		
-		png(paste(name, out_tag, corr_name, "Score.png", sep="_"), width=8, height=4, units="in", res=100)
-		par(mar=c(4,10,1,1))
-		barplot(agreement, horiz=TRUE, xlab="Autoannotation Agreement", col="grey65")
-		dev.off()
 	}
 }
 
+png(paste(name, out_tag, corr_name, "Score.png", sep="_"), width=8, height=4, units="in", res=100)
+par(mar=c(4,10,1,1))
+barplot(agreement, horiz=TRUE, xlab="Autoannotation Agreement", col="grey65")
+dev.off()
+
+print(agreement)

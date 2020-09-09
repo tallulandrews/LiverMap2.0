@@ -41,9 +41,9 @@ C68,/cluster/projects/macparland/TA/LiverMap2.0/RawData/MacParland_Sonya__C68_To
 C69,/cluster/projects/macparland/TA/LiverMap2.0/RawData/MacParland_Sonya__human_c69_liver_19years_male_3pr_v2/raw_gene_bc_matrices/GRCh38,Human
 C70,/cluster/projects/macparland/TA/LiverMap2.0/RawData/C70_with_top_up_sequencing/raw_gene_bc_matrices/GRCh38,Human
 C70_5pr_reseq,/cluster/projects/macparland/TA/LiverMap2.0/RawData/C70_5pr_resequenced/raw_gene_bc_matrices/GRCh38,Human
-C70_TST,/cluster/projects/macparland/TA/Single_Nuc/Healthy/C70_NUC_TST_3pr_v3,Human
+C70_TST,/cluster/projects/macparland/TA/Single_Nuc/Healthy/C70_NUC_TST_3pr_v3/raw_feature_bc_matrix,Human
 C72,/cluster/projects/macparland/TA/LiverMap2.0/RawData/C72/raw_gene_bc_matrices/GRCh38,Human
-C72,/cluster/projects/macparland/TA/Single_Nuc/Healthy/C72/C72_NUC_TST_3pr_v3,Human
+C72_TST,/cluster/projects/macparland/TA/Single_Nuc/Healthy/C72_NUC_TST_3pr_v3/raw_feature_bc_matrix,Human
 RAT9-3,/cluster/projects/macparland/TA/Single_Nuc/Amby/RAT_9-3_CST_3pr_v3/raw_feature_bc_matrix,Rat
 RAT6-1,/cluster/projects/macparland/TA/Single_Nuc/Amby/RAT_6-1_CST_3pr_v3/raw_feature_bc_matrix/,Rat
 C46_RESEQ,/cluster/projects/macparland/TA/LiverMap2.0/RawData/C46_RESEQUENCED_Jul_30_20/raw_feature_bc_matrix,Human
@@ -55,4 +55,4 @@ C66_RESEQ,/cluster/projects/macparland/TA/LiverMap2.0/RawData/C66_RESEQUENCED_JU
 C68_RESEQ,/cluster/projects/macparland/TA/LiverMap2.0/RawData/C68_RESEQUENCED_JUL_20/raw_feature_bc_matrix,Human
 C70_RESEQ,/cluster/projects/macparland/TA/LiverMap2.0/RawData/C70_3v2_RESEQUENCED_JUL_20/raw_feature_bc_matrix,Human
 C72_RESEQ,/cluster/projects/macparland/TA/LiverMap2.0/RawData/C72_3V2_18Feb20_RESEQUENCED_JUL_20/raw_feature_bc_matrix,Human
-
+C61_RESEQ,/cluster/projects/macparland/TA/LiverMap2.0/RawData/C61_TLH_3pr_RESQUENCED_Aug2020/raw_feature_bc_matrix,Human

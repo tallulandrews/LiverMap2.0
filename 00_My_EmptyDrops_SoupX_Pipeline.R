@@ -155,7 +155,7 @@ dev.off()
 
 
 ########### Begin if init seurat output file exists
-#if (!file.exists(paste(OPTS$out_prefix, "EmptyOnly.rds", sep="_"))) {
+if (!file.exists(paste(OPTS$out_prefix, "EmptyOnly.rds", sep="_"))) {
 # Run EmptyDrops
 set.seed(100)
 e.out <- emptyDrops(rawdata, lower=is_empty_threshold, niters=100000, ignore=OPTS$trim, retain=mandatory_cell_threshold)
@@ -236,7 +236,7 @@ myseur@meta.data$donor <- rep(OPTS$out_prefix, ncol(myseur));
 myseur@meta.data$cell_ID <- paste(myseur@meta.data$donor, myseur@meta.data$cell_barcode, sep="_");
 
 orig.meta.data <- myseur@meta.data;
-#}
+}
 ###### End if init seurat doesn't exist
 
 
@@ -321,14 +321,15 @@ run_seurat_pipeline <- function(myseur, out_tag) {
 	return(myseur)
 }
 
-#if (!file.exists(paste(OPTS$out_prefix, "EmptyOnly.rds", sep="_"))) {
-myseur <- run_seurat_pipeline(myseur, "initSeurat");
+if (!file.exists(paste(OPTS$out_prefix, "EmptyOnly.rds", sep="_"))) {
+	myseur <- run_seurat_pipeline(myseur, "initSeurat");
 
-saveRDS(myseur, paste(OPTS$out_prefix, "EmptyOnly.rds", sep="_"));
+	saveRDS(myseur, paste(OPTS$out_prefix, "EmptyOnly.rds", sep="_"));
 
-#} else {
-#myseur <- readRDS(paste(OPTS$out_prefix, "EmptyOnly.rds", sep="_"));
-#}
+} else {
+	myseur <- readRDS(paste(OPTS$out_prefix, "EmptyOnly.rds", sep="_"));
+	orig.meta.data <- myseur@meta.data;
+}
 ############## SoupX ##############
 
 SoupX_outfile <- paste(OPTS$out_prefix, "SoupX.rds", sep="_")
@@ -336,6 +337,10 @@ SoupX_outfile <- paste(OPTS$out_prefix, "SoupX.rds", sep="_")
 require("Seurat")
 set.seed(4671)
 # Create SoupX object
+my_seur_genes <- unlist(myseur[["RNA"]][["origID"]])
+raw_data_genes <- rownames(rawdata)
+rawdata <- rawdata[raw_data_genes %in% my_seur_genes,]
+myseur <- myseur[my_seur_genes %in% raw_data_genes,]
 rawdata <- rawdata[match(unlist(myseur[["RNA"]][["origID"]]), rownames(rawdata)),]
 keep_cells <- colnames(myseur);
 tot_umi <- Matrix::colSums(rawdata);
@@ -383,6 +388,8 @@ out <- out[,match(colnames(myseur), colnames(out))]
 print(identical(colnames(out), rownames(myseur@meta.data)))
 
 soup_seurat <- CreateSeuratObject(counts=out, meta.data=orig.meta.data, project=OPTS$out_prefix, min.cells = OPTS$cells, min.features = OPTS$genes);
+
+saveRDS(soup_seurat, paste(OPTS$out_prefix, "SoupX_prepipeline.rds", sep="_"))
 
 soup_seurat <- run_seurat_pipeline(soup_seurat, "SoupSeurat");
 saveRDS(soup_seurat, paste(OPTS$out_prefix, "SoupX.rds", sep="_"))

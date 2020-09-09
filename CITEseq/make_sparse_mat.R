@@ -16,11 +16,11 @@ rownames(mat) <- levels(genes);
 colnames(mat) <- levels(cells);
 
 # antibody tag 2 gene/antigen
-ref <- read.delim("../100819QG_TotalSeq-C_human_Panel_list.csv", sep="\t",header=T)
-ref <- ref[match(rownames(mat), ref$DNA.Barcode),]
-rownames(ref) <- ref$DNA.Barcode;
+#ref <- read.delim("../100819QG_TotalSeq-C_human_Panel_list.csv", sep="\t",header=T)
+#ref <- ref[match(rownames(mat), ref$DNA.Barcode),]
+#rownames(ref) <- ref$DNA.Barcode;
 
-saveRDS(ref, args[2])
+saveRDS(mat, args[2])
 #require("SingleCellExperiment")
 #sce <- SingleCellExperiment(assays=list(counts=mat), rowData=ref);
 
