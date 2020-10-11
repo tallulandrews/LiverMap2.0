@@ -80,13 +80,17 @@ map_cell_types <- function(types) {
 		"any_B_cell", "Bcell",
 		"Bcell", "Bcell",
 		"CD3abTcells", "CD3abTcells",
+		"CD3abTcell", "CD3abTcells",
+		"NaiveTcell", "CD3abTcells",
 		"CentralvenousLSECs", "cvLSECs",
 		"CV_LSECs", "cvLSECs",
 		"cvLSECs", "cvLSECs",
+		"cvLSEC", "cvLSECs",
 		"LSECs", "LSECs",
 		"Cholangiocytes", "Cholangiocyte",
 		"Cholangiocyte", "Cholangiocyte",
 		"Cholan", "Cholangiocyte",
+		"Chol", "Cholangiocyte",
 		"Erythoidcells", "Eryth",
 		"Erythoid", "Eryth",
 		"Erythroid", "Eryth",
@@ -95,6 +99,7 @@ map_cell_types <- function(types) {
 		"gdTcells1", "gdTcells1",
 		"gd_T_1", "gdTcells1",
 		"gd_T_2", "gdTcells2",
+		"gdTcell", "gdTcells2",
 		"Hepatocyte", "Hepatocyte",
 		"Hepatocytes", "Hepatocyte",
 		"Hep", "Hepatocyte",
@@ -106,6 +111,7 @@ map_cell_types <- function(types) {
 		"Infl_Mac", "InfMac",
 		"interzonalHep", "interHep",
 		"interHep", "interHep",
+		"InterHep", "interHep",
 		"Macrophage", "Macrophage",
 		"Mac", "Macrophage",
 		"Macrophages", "Macrophage",
@@ -113,9 +119,13 @@ map_cell_types <- function(types) {
 		"MatBcell", "MatBcell",
 		"NK-likecells", "NKcells",
 		"NK_like", "NKcells",
+		"NKTcell", "NKcells",
+		"NKTcells", "NKcells",
 		"NKcells", "NKcells",
 		"Non-inflammatoryMacrophages", "NonInfMac",
 		"NonInfl_Mac", "NonInfMac",
+		"NonInflMac1", "NonInfMac",
+		"NonInflMac22", "NonInfMac",
 		"NonInfMac", "NonInfMac",
 		"PericentralHep", "CentralHep",
 		"CentralHep", "CentralHep",
@@ -130,8 +140,14 @@ map_cell_types <- function(types) {
 		"PeriportalLSECs", "PortalLSECs",
 		"PeriLSECs", "PortalLSECs",
 		"PortalLSECs", "PortalLSECs",
+		"pLSECs", "PortalLSECs",
+		"pLSEC", "PortalLSECs",
+		"PortLSECs", "PortalLSECs",
 		"Periportalendothelialcells", "Portalendo",
 		"Portal_Endo", "Portalendo",
+		"PortalEndo", "Portalendo",
+		"Portal_Endo", "Portalendo",
+		"PortEndo", "Portalendo",
 		"Portalendothelialcells", "Portalendo",
 		"Portalendo", "Portalendo",
 		"Stellatecells", "Stellate",
@@ -176,7 +192,7 @@ Type_DimPlot <- function(myseur, type_col="consistent_labs", reduction="umap", c
 
 	# UMAP + Ref scmap anno
 	new_colour_scheme <- Cell_type_colours[order(Cell_type_colours[,1]),]
-	myseur@meta.data$consistent_labs <- map_cell_types(myseur@meta.data[,type_col])
+	myseur@meta.data[,type_col] <- map_cell_types(myseur@meta.data[,type_col])
 	new_colour_scheme <- new_colour_scheme[new_colour_scheme[,1] %in% myseur@meta.data[,type_col],]
 
 	DimPlot(myseur, reduction=reduction, group.by=type_col, pt.size=.1)+scale_color_manual(values=new_colour_scheme[,2])+annotate("text", x=umap_lab_pos[1,], y=umap_lab_pos[2,], label=colnames(umap_lab_pos), colour="grey35")
