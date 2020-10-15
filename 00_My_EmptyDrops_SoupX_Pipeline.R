@@ -217,16 +217,25 @@ rename_genes <- function(myseur, new_names, old_names) {
 	
 genes <- rownames(myseur)
 myseur[["RNA"]][["origID"]] <- genes
+#myseur@misc[["orig_gene_ID"]] <- genes
 raw_genes <- rownames(rawdata) # fix gene ID to remove hypens like Seurat does.
 raw_genes <- sub("_","-", raw_genes)
 rownames(rawdata) <- raw_genes
 if (OPTS$organism == "Mouse") {
 	hgenes <- General_Map(genes, in.org="Mmus", out.org="Hsap", in.name="symbol", out.name="symbol")
 	myseur <- rename_genes(myseur, hgenes, genes)
+	hgenes <- General_Map(rownames(rawdata), in.org="Mmus", out.org="Hsap", in.name="symbol", out.name="symbol")
+	tofix <- hgenes=="" | duplicated(hgenes)
+	hgenes[tofix] <- rownames(rawdata)[tofix]
+	rownames(rawdata) <- hgenes
 }
 if (OPTS$organism == "Rat") {
 	hgenes <- General_Map(genes, in.org="Rat", out.org="Hsap", in.name="symbol", out.name="symbol")
 	myseur <- rename_genes(myseur, hgenes, genes)
+	hgenes <- General_Map(rownames(rawdata), in.org="Rat", out.org="Hsap", in.name="symbol", out.name="symbol")
+	tofix <- hgenes=="" | duplicated(hgenes)
+	hgenes[tofix] <- rownames(rawdata)[tofix]
+	rownames(rawdata) <- hgenes
 }
 
 
@@ -248,6 +257,10 @@ run_seurat_pipeline <- function(myseur, out_tag) {
 	myseur <- Seurat::ScaleData(myseur);
 	# HVG genes (n=2000)
 	myseur <- Seurat::FindVariableFeatures(myseur, selection.method = "vst", nfeatures = 2000)
+	hvgs <- VariableFeatures(myseur); hvgs <- hvgs[!grepl("^MT-", hvgs)]; # added 22Sept2020
+	hvgs <- VariableFeatures(myseur); hvgs <- hvgs[!grepl("^Mt-", hvgs)]; # added 22Sept2020
+	hvgs <- VariableFeatures(myseur); hvgs <- hvgs[!grepl("^mt-", hvgs)]; # added 22Sept2020
+	VariableFeatures(myseur) <- hvgs;
 	# PCA 
 	myseur <- Seurat::RunPCA(myseur, features = VariableFeatures(object = myseur))
 
@@ -305,17 +318,26 @@ run_seurat_pipeline <- function(myseur, out_tag) {
 	dev.off()
 
 	png(paste(OPTS$out_prefix, out_tag, "perMT.png", sep="_"), width=6, height=6, units="in", res=150)
-	print(Seurat::FeaturePlot(myseur, "percent.mt", reduction="umap"))
+	print(Seurat::FeaturePlot(myseur, "percent.mt", reduction="umap")+theme(
+		axis.line=element_blank(),axis.text.x=element_blank(),
+	          axis.text.y=element_blank(),axis.ticks=element_blank(),
+        	  axis.title.x=element_blank(),  axis.title.y=element_blank()))
 	dev.off()
 	png(paste(OPTS$out_prefix, out_tag, "nFeature.png", sep="_"), width=6, height=6, units="in", res=150)
-	print(Seurat::FeaturePlot(myseur, "nFeature_RNA", reduction="umap"))
+	print(Seurat::FeaturePlot(myseur, "nFeature_RNA", reduction="umap")+theme(
+                axis.line=element_blank(),axis.text.x=element_blank(),
+                  axis.text.y=element_blank(),axis.ticks=element_blank(),
+                  axis.title.x=element_blank(),  axis.title.y=element_blank()))
 	dev.off()
 	png(paste(OPTS$out_prefix, out_tag, "CCphase.png", sep="_"), width=6, height=6, units="in", res=150)
 	print(Seurat::DimPlot(myseur, group.by="Phase", reduction="umap"))
 	dev.off()
 
-	png(paste(OPTS$out_prefix, out_tag, "MarkerGenes.png", sep="_"), width=6, height=6, units="in", res=150)
-	print(Seurat::FeaturePlot(myseur, features=c("ALB","CYP3A4", "SCD", "MARCO", "LYZ", "CD68", "IGKC", "TRAC", "PTPRC")))
+	png(paste(OPTS$out_prefix, out_tag, "MarkerGenes.png", sep="_"), width=12, height=12, units="in", res=150)
+	print(Seurat::FeaturePlot(myseur, features=c("ALB","CYP3A4", "SCD", "MARCO", "LYZ", "CD68", "IGKC", "TRAC", "PTPRC"))+theme(
+                axis.line=element_blank(),axis.text.x=element_blank(),
+                  axis.text.y=element_blank(),axis.ticks=element_blank(),
+                  axis.title.x=element_blank(),  axis.title.y=element_blank()))
 	dev.off()
 
 	return(myseur)
@@ -337,11 +359,15 @@ SoupX_outfile <- paste(OPTS$out_prefix, "SoupX.rds", sep="_")
 require("Seurat")
 set.seed(4671)
 # Create SoupX object
-my_seur_genes <- unlist(myseur[["RNA"]][["origID"]])
-raw_data_genes <- rownames(rawdata)
-rawdata <- rawdata[raw_data_genes %in% my_seur_genes,]
-myseur <- myseur[my_seur_genes %in% raw_data_genes,]
-rawdata <- rawdata[match(unlist(myseur[["RNA"]][["origID"]]), rownames(rawdata)),]
+#my_seur_genes <- unlist(myseur[["RNA"]][["origID"]])
+#my_seur_genes <- unlist(myseur@misc[["orig_gene_ID"]])
+#raw_data_genes <- rownames(rawdata)
+rawdata <- rawdata[rownames(rawdata) %in% rownames(myseur),]
+myseur <- myseur[rownames(myseur) %in% rownames(rawdata),]
+#rawdata <- rawdata[match(unlist(myseur[["RNA"]][["origID"]]), rownames(rawdata)),]
+#rawdata <- rawdata[match(unlist(myseur@misc[["orig_gene_ID"]]), rownames(rawdata)),]
+rawdata <- rawdata[match(rownames(myseur), rownames(rawdata)),]
+#rownames(rawdata) <- rownames(myseur)
 keep_cells <- colnames(myseur);
 tot_umi <- Matrix::colSums(rawdata);
 tot_is_cell <- min(tot_umi[colnames(rawdata) %in% colnames(myseur)])
@@ -365,7 +391,7 @@ non_expressed_gene_list = list(HB =c("HBB", "HBA1", "HBA"),
 				Bile=c("SLC10A1", "SLC01B1", "SLCO1B3", "SLC22A1", "SLC22A7", 
 					"ABCB1", "ABCB11", "ABCB4", "ABCC3", "ABCC6"));
 #Jawaria - 7Aug2020
-#non_expressed_gene_list = list(HB =c("HBB", "HBA1", "HBA"), 
+#expanded_expressed_gene_list = list(HB =c("HBB", "HBA1", "HBA"), 
 #				TCR=c("TRAC", "TRBC1", "TRBC2", "TRDC", "TRGC1", "TRGC2"), 
 #				Drug=c("CYP2E1", "CYP3A7", "CYP2A7", "CYP2A6", "CYP2B6", "CYP2C8"), 
 #				BCR=c("IGKC", "IGHE", "IGHM", "IGLC1", "IGLC3", "IGLC2"), 
@@ -373,9 +399,34 @@ non_expressed_gene_list = list(HB =c("HBB", "HBA1", "HBA"),
 #				Bile=c("SLC10A1", "SLC01B1", "SLCO1B3", "SLC22A1", "SLC22A7", 
 #					"ABCB1", "ABCB11", "ABCB4", "ABCC3", "ABCC6"),
 #				Lipid=c("APOC1", "APOC3", "APOA2", "APOA1", "APOE", "APOH"));
+
+# For snRNAseq
+expanded_non_genes = list(
+		AntiB=c("IGKC","JCHAIN","IGHA1","IGLC1","IGLC2","IGLC3"),
+		MatB=c("CD22","CD37","CD79B","FCRL1","LTB","DERL3","IGHG4"),
+		CD3T=c("CD8A","CD8B","CD3D","CD3G","TRAC","IL32","TRBC1","TRBC2"),
+		Hep=c("CYP1A2","CYP2E1","CYP3A4","GLUL","DCXR","FTL","GPX2","GSTA1","CYP2A7","FABP1","HAL","AGT","ALDOB","SDS"),
+		LSEC=c("FCN2","CLEC1B","CLEC4G","PVALB","S100A13","GJA5","SPARCL1","CLEC14A","PLVAP","EGR3"),
+		Eryth=c("HBB","HBA1","HBA2"),
+		NKT=c("CSTW","IL7R","GZMB","GZMH","TBX21","HOPX","PRF1","S100B","TRDC","TRGC1","TRGC2","IL2RB","KLRB1","NCR1","NKG7","NCAM1","XCL2","XCL1","CD160","KLRC1"),
+		Mac=c("VCAN","S100A8","MNDA","LYZ","FCN1","CXCL8","VCAN","VCAM1","TTYH3","TIMD4","SLC40A1","RAB31","MARCO","HMOX1","C1QC"),
+		Chol=c("PROM1","SOX9","KRT7","KRT19","CFTR","EPCAM","CLDN4","CLDN7","ANXA4","TACSTD2"),
+		Stel=c("ACTA2","COL1A1","RBP1","TAGLN","ADAMTSL2","GEM","LOXL1","LUM"),
+		Endo=c("PECAM1","TAGLN","VWF","FLT1","MMRN1","RSPO3","LYPD2","LTC4S","TSHZ2","IL1R1")
+		)
+		
+
 non_expressed_gene_list <- lapply(non_expressed_gene_list, function(x){return(x[x %in% rownames(myseur)])})
 size <- unlist(lapply(non_expressed_gene_list, length))
 non_expressed_gene_list<-non_expressed_gene_list[size > 3]
+
+expanded_non_genes <- lapply(expanded_non_genes, function(x){return(x[x %in% rownames(myseur)])})
+size <- unlist(lapply(expanded_non_genes, length))
+expanded_non_genes<-expanded_non_genes[size > 3]
+
+if (length(non_expressed_gene_list) < 4) {
+	non_expressed_gene_list <- expanded_non_genes
+}
 
 useToEst = estimateNonExpressingCells(sc, nonExpressedGeneList = non_expressed_gene_list, clusters=myseur$seurat_clusters)
 sc = calculateContaminationFraction(sc, non_expressed_gene_list, useToEst = useToEst, cellSpecificEstimates=TRUE)
