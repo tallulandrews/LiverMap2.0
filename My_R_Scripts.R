@@ -64,6 +64,15 @@ group_rowmeans <- function(MAT, group_labs, type=c("mean","sum")) {
         return(mus);
 }
 
+# Row var by groups.
+group_rowvars <- function(MAT, group_labs, type=c("mean","sum")) {
+        d <- split(seq(ncol(MAT)), group_labs);
+	mus <- sapply(d, function(group) my_rowMeans(MAT[,group]))
+	sq_mus <- sapply(d, function(group) my_rowMeans(MAT[,group])^2)
+	var <- sq_mus - mus^2
+        return(mus);
+}
+
 # Col means or col sums by groups.
 group_colmeans <- function(MAT, group_labs, type=c("mean", "sum")) {
         d <- split(seq(nrow(MAT)), group_labs);
