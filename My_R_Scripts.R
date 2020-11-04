@@ -65,10 +65,10 @@ group_rowmeans <- function(MAT, group_labs, type=c("mean","sum")) {
 }
 
 # Row var by groups.
-group_rowvars <- function(MAT, group_labs, type=c("mean","sum")) {
+group_rowvars <- function(MAT, group_labs) {
         d <- split(seq(ncol(MAT)), group_labs);
 	mus <- sapply(d, function(group) my_rowMeans(MAT[,group]))
-	sq_mus <- sapply(d, function(group) my_rowMeans(MAT[,group])^2)
+	sq_mus <- sapply(d, function(group) my_rowMeans(MAT[,group]^2))
 	vars <- sq_mus - mus^2
         return(vars);
 }
