@@ -42,6 +42,7 @@ simplify_annotations <- function(annotations, types=c("B", "Mac", "T", "Hep")) {
 
 Cell_type_colours <- rbind(
 	c("ambiguous", "#7F7F7F"), #grey50
+	c("doublet", "#7F7F7F"), #grey50
 	c("Eryth", "#8B0000"), #darkred
 	c("Hepatocyte", "#e41a1c"), #bright red
 	c("OtherHep", "#e41a1c"), #bright red
@@ -64,7 +65,8 @@ Cell_type_colours <- rbind(
 	c("NKcells", "#a65628"),
 	c("LSECs", "#ffff33"),
 	c("cvLSECs", "#ff7f00"),
-	c("PortalLSECs", "#4d004b"))
+	c("PortalLSECs", "#4d004b")
+)
 
 colnames(Cell_type_colours) <- c("type", "colour")
 
@@ -73,6 +75,12 @@ map_cell_types <- function(types) {
 	type <- as.character(types)
 	tab <- unique(matrix(c("ambiguous", "ambiguous",
 		"None", "ambiguous",
+		"Unknown", "ambiguous",
+		"Unknown1", "ambiguous",
+		"Unknown2", "ambiguous",
+		"Unknown3", "ambiguous",
+		"Doublet", "doublet",
+		"doublet", "doublet",
 		"AntibodysecretingBcells", "AntiBcell",
 		"AntiBcell", "AntiBcell",
 		"Bcells", "Bcell",
@@ -102,6 +110,7 @@ map_cell_types <- function(types) {
 		"gdTcell", "gdTcells2",
 		"Hepatocyte", "Hepatocyte",
 		"Hepatocytes", "Hepatocyte",
+		"ErythHep", "Hepatocyte",
 		"Hep", "Hepatocyte",
 		"inflamatoryMacrophages", "InfMac",
 		"InflamatoryMacrophages", "InfMac",
@@ -155,6 +164,7 @@ map_cell_types <- function(types) {
 		"Tcell", "Tcell",
 		"Tcells", "Tcell",
 		"gdTcells2", "gdTcells2",
+		"gdTcells", "gdTcells2",
 		"UnidentifiedHep", "OtherHep",
 		"OtherHep", "OtherHep",
 		"Bcell", "Bcell",
