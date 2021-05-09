@@ -17,8 +17,8 @@ bin_age <- function(age_vec) {
 }
 
 bin_BMI <- function(weight_vec) {
-	bins_BMI <- c(0, 15,18,25,30,35,40, 100);
-	names_bmi <- c("very weight", "underweight", "normal", "overweight", "obese", "very obese")
+	bins_BMI <- c(0, 15,18,25,30,40, 100);
+	names_bmi <- c("very underweight", "underweight", "normal", "overweight", "obese", "very obese")
 	binned <- cut(weight_vec, breaks=bins_BMI)
 	lab <- names_bmi[binned]
 	return(lab)
@@ -40,4 +40,12 @@ get_metadata <- function(donor_vec) {
 	metadata$WEIGHT <- factor(bin_BMI(metadata$BMI))
 	metadata$SEX <- factor(metadata$sex)
 	return(metadata)
+}
+
+
+get_transplant_outcome <- function(donor_vec){
+        tmp <- read.delim("/cluster/home/tandrews/scripts/LiverMap2.0/Caudate_recip_data_Dec_3_20.csv", sep=",")
+        reject <- tmp[ donor_vec, tmp[,1]), "Post.LT.Rejection"]
+        reject <- factor(reject, levels=c("N", "?", "Y"))
+        return(reject)
 }
