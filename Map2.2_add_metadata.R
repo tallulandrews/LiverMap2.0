@@ -45,7 +45,7 @@ get_metadata <- function(donor_vec) {
 
 get_transplant_outcome <- function(donor_vec){
         tmp <- read.delim("/cluster/home/tandrews/scripts/LiverMap2.0/Caudate_recip_data_Dec_3_20.csv", sep=",")
-        reject <- tmp[ donor_vec, tmp[,1]), "Post.LT.Rejection"]
+        reject <- tmp[ donor_vec, tmp[,1], "Post.LT.Rejection"]
         reject <- factor(reject, levels=c("N", "?", "Y"))
         return(reject)
 }
