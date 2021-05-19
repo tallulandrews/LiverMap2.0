@@ -1,7 +1,7 @@
 
-
 require(Seurat)
 source("/cluster/home/tandrews/scripts/LiverMap2.0/Colour_Scheme.R")
+source("/cluster/home/tandrews/scripts/LiverMap2.0/SubColour_Scheme.R")
 colours_tech <- c("darkviolet", "orchid1")
 source("/cluster/home/tandrews/scripts/LiverMap2.0/My_R_Scripts.R")
 
@@ -31,23 +31,27 @@ new_colour_scheme <- Cell_type_colours[order(Cell_type_colours[,1]),]
 mergedobj@meta.data[,"Cell Type"] <- map_cell_types(metaData[,"Coarse_Manual_Anno"])
 new_colour_scheme <- new_colour_scheme[new_colour_scheme[,1] %in% mergedobj@meta.data[,"Cell Type"],]
 
-pdf("Figure1_UMAP_Cluster_and_Type.pdf", width=8, height=8)
-print( DimPlot(mergedobj, reduction="umap", group.by="Cell Type", pt.size=.1)+scale_color_manual(values=new_colour_scheme[,2])+annotate("text", x=umap_lab_pos[1,], y=umap_lab_pos[2,], label=colnames(umap_lab_pos), colour="grey35") )
+#pdf("Figure1_UMAP_Cluster_and_Type.pdf", width=8, height=8)
+png("Figure1_UMAP_Cluster_and_Type.png", width=8, height=8, units="in", res=300)
+print( DimPlot(mergedobj, reduction="umap", group.by="Cell Type", pt.size=.1)+scale_color_manual(values=new_colour_scheme[,2])+annotate("text", x=umap_lab_pos[1,], y=umap_lab_pos[2,], label=colnames(umap_lab_pos), colour="black") )
 dev.off()
 
 # UMAP by demograph data
 
 mergedobj@meta.data$donor_sex <- factor(metaData$donor_sex)
 
-pdf("Figure1_UMAP_Sex.pdf", width=8, height=8)
+#pdf("Figure1_UMAP_Sex.pdf", width=8, height=8)
+png("Figure1_UMAP_Sex.png", width=6, height=6, units="in", res=300)
 print( DimPlot(mergedobj, reduction="umap", group.by="donor_sex", pt.size=.1)+scale_color_manual(values=colours_sex) )
 dev.off()
 
-pdf("Figure1_UMAP_Age.pdf", width=8, height=8)
+#pdf("Figure1_UMAP_Age.pdf", width=8, height=8)
+png("Figure1_UMAP_Age.png", width=6, height=6, units="in", res=300)
 print( DimPlot(mergedobj, reduction="umap", group.by="donor_age_group", pt.size=.1)+scale_color_manual(values=colours_age) )
 dev.off()
 
-pdf("Figure1_UMAP_Tech.pdf", width=8, height=8)
+#pdf("Figure1_UMAP_Tech.pdf", width=8, height=8)
+png("Figure1_UMAP_Tech.png", width=6, height=6, units="in", res=300)
 print( DimPlot(mergedobj, reduction="umap", group.by="assay_type", pt.size=.1)+scale_color_manual(values=colours_tech) )
 dev.off()
 
@@ -55,23 +59,27 @@ dev.off()
 
 bar_dat <- table(metaData$Coarse_Manual_Anno, mergedobj@meta.data$donor_sex)
 bar_dat <- bar_dat/rowSums(bar_dat)
-pdf("Figure1_Barplot_Sex.pdf", width=6, height=6)
+#pdf("Figure1_Barplot_Sex.pdf", width=6, height=6)
+png("Figure1_Barplot_Sex.png", width=6, height=6, units="in", res=300)
 par(mar=c(8, 4, 1,1))
 barplot(t(bar_dat)*100, col=colours_sex, las=2, main="", xlab="", ylab="Proportion (%)")
 dev.off()
 
 bar_dat <- table(metaData$Coarse_Manual_Anno, mergedobj@meta.data$assay_type)
 bar_dat <- bar_dat/rowSums(bar_dat)
-pdf("Figure1_Barplot_Tech.pdf", width=6, height=6)
+#pdf("Figure1_Barplot_Tech.pdf", width=6, height=6)
+png("Figure1_Barplot_Tech.png", width=6, height=6, units="in", res=300)
 par(mar=c(8, 4, 1,1))
 barplot(t(bar_dat)*100, col=colours_tech, las=2, main="", xlab="", ylab="Proportion (%)")
 dev.off()
 
 bar_dat <- table(metaData$Coarse_Manual_Anno, mergedobj@meta.data$donor_age_group)
 bar_dat <- bar_dat/rowSums(bar_dat)
-pdf("Figure1_Barplot_Age.pdf", width=6, height=6)
+reorder <- c(3,1,2)
+#pdf("Figure1_Barplot_Age.pdf", width=6, height=6)
+png("Figure1_Barplot_Age.png", width=6, height=6, units="in", res=300)
 par(mar=c(8, 4, 1,1))
-barplot(t(bar_dat)*100, col=colours_age, las=2, main="", xlab="", ylab="Proportion (%)")
+barplot(t(bar_dat[,reorder])*100, col=colours_age[reorder], las=2, main="", xlab="", ylab="Proportion (%)")
 dev.off()
 
 
@@ -92,7 +100,9 @@ metadata <- metadata[rownames(metadata) != "C62",]
 #metadata <- metadata[1:(nrow(metadata)-2),]
 # Manual stripchart
 
-pdf("Figure1_Demographics_Dots.pdf", width=2, height=6)
+#pdf("Figure1_Demographics_Dots.pdf", width=4, height=8)
+png("Figure1_Demographics_Dots.png", width=4, height=8,units="in", res=300)
+par(mar=c(0.5,4,0.5,0.5))
 xes=rep(1, nrow(metadata))
 yes=metadata$age
 xes[duplicated(yes)] <- 1.1
@@ -115,12 +125,13 @@ dev.off()
 
 metaData <- readRDS("../Merged_EmptyOnly_obj_Map2.2_ImportedClusters_ManualAnno_MetaDataOnly.rds")
 
-pdf("Figure1_technology_bars.pdf", width=2, height=6)
+pdf("Figure1_technology_bars.pdf", width=2, height=2)
+png("Figure1_technology_bars.png", width=2, height=2, units="in", res=300)
 # cell count by technology
 assay <- table(metaData$assay_type)
 bars <- barplot(assay, horiz=T, xlab="N cells", ylab="", main="", xlim=c(0, 75000), col=colours_tech)
 tmp <- table(metaData$assay_type, metaData$sample)
-text(assay, bars[,1], paste("(",tmp,")", sep=""), pos=2)
+text(assay, bars[,1], paste("(",tmp,")", sep=""), pos=4)
 dev.off()
 
 
