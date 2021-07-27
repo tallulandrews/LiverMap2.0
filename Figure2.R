@@ -79,10 +79,10 @@ for (sample_i in 1:nrow(typefreq_sample_prop)) {
 			Zeds <- c(Zeds, Z)
 		}
 		threshold <- qnorm(1-0.05/length(Zeds))
-		if (sum(Zeds > threshold, na.rm=T) > 0.5*length(Zeds)){ 
+		if (sum(Zeds > threshold, na.rm=T) > 0.75*length(Zeds)){ 
 			is.diff[sample_i, type_i] <- 1;
 		}
-		if (sum(Zeds < -1*threshold, na.rm=T) > 0.5*length(Zeds)){ 
+		if (sum(Zeds < -1*threshold, na.rm=T) > 0.75*length(Zeds)){ 
 			is.diff[sample_i, type_i] <- -1;
 		}
 	}
@@ -91,8 +91,8 @@ for (sample_i in 1:nrow(typefreq_sample_prop)) {
 
 is.diff <- cbind(is.diff, rep(0, nrow(is.diff)));
 #pdf("Figure2_Freq_by_Sample_boxplot.pdf", width=10, height=6)
-pt_col <- rep(rgb(0,0,0,0), length(as.vector(typefreq_by_sample)));
-pt_col[as.vector(is.diff) == 0] <- rgb(0,0,0,0.65);
+pt_col <- rep(rgb(0.4,0.4,0.4,0.6), length(as.vector(typefreq_by_sample)));
+pt_col[as.vector(is.diff) != 0] <- rgb(0,0,0);
 
 png("Figure2_Freq_by_Sample_boxplot_transparent.png", width=10, height=6.5, units="in", res=300)
 par(mar=c(10,4,1,1))
@@ -102,7 +102,7 @@ bxp <- boxplot(as.vector(typefreq_by_sample)~factor(rep(colnames(typefreq_by_sam
 	xlab="", ylab="Frequency (%)", outline=F, ylim=c(0,80))
 points(jitter(rep(1:15, each=34)), as.vector(typefreq_by_sample), pch=16, col=pt_col)
 points(1:15, overall_freq*100, pch=23, bg="goldenrod1", cex=1.5)
-legend("topright", "Full Map", bty="n", pch=23, cex=1.5, pt.bg="goldenrod1")
+legend("topright", c("Full Map", "Differ (q < 0.05)"), bty="n", pch=c(23, 16), cex=1.5, pt.bg=c("goldenrod1", "black"))
 dev.off()
 
 
