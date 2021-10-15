@@ -1,9 +1,14 @@
 require("Seurat")
 
-proj_name="Map2.2_merged_integrated"
+args <- commandArgs(trailingOnly=TRUE)
+
+#proj_name="Map2.2_merged_integrated"
+proj_name=args[1]
 #liver.integrated <- readRDS("harmony_integrated.rds")
 #liver.integrated <- readRDS("integration_v2.rds")
-liver.integrated <- readRDS(".rds")
+#liver.integrated <- readRDS("Merged_integrated_with_metadata.rds")
+#liver.integrated <- readRDS("Map2.2_merged_integrated.rds")
+liver.integrated <- readRDS(args[2])
 
 set.seed(7742)
 # Dimensionality Reduction
@@ -52,27 +57,53 @@ require("apcluster")
 require("gplots")
 set.seed(18371)
 
-res1 <- apcluster(-1*as.matrix(clust_dists), p=-2.5)
+res1 <- apcluster(-1*as.matrix(clust_dists), p=-2.5) # SoupX Map = -2.2, Empty Map = -2.5
 #res2 <- apcluster(as.matrix(clust_similr1), p=-2)
 #res3 <- apcluster(as.matrix(clust_similr1), p=-2)
 
 #valid_clusterings <- res1@exemplars[which(res1@exemplars %in% res2@exemplars & res1@exemplars %in% res3@exemplars)]
 
-coarse_lvl <- names(res1@exemplars)[2]
-fine_lvl <- names(res1@exemplars)[3]
+# Cluster-Cell-type Purity
+type_purity <- function(clusters, annotations) {
+	tmp <- table(clusters, annotations)
+	shan <- median(vegan::diversity(tmp, index="shannon", MARGIN=1))
+	simp <- median(vegan::diversity(tmp, index="simpson", MARGIN=1))
+	return(c(shan, simp))
+	
+}
+
+score <- apply(clust_table, 2, type_purity, annotations=liver.integrated@meta.data$marker_labs)
+#plot(score, xlab="clustering" ylab="type_purity")
+score2 <- colMeans(score)
+
+exemplars <- c();
+for (c in res1@clusters) {
+	clusterings <- names(c)
+	scores <- score2[clusterings]
+	exemplars <- c(exemplars, scores[which(scores == min(scores))])
+}
+
+liver.integrated@misc$exemplars <- exemplars;
+
+core_lvl <- names(exemplars)[1]
+coarse_lvl <- names(exemplars)[2]
+fine_lvl <- names(exemplars)[3]
 #coarse_lvl <- "knn_70_res_0.3" # basic_integration_analysis.rds = knn_70_res_0.3
 #fine_lvl <- "knn_70_res_0.9" # basic_integration_analysis.rds = knn_90_res_1.5
 
 #manually select which exemplar to use
+liver.integrated@meta.data$Core_clusters <- liver.integrated@meta.data[[core_lvl]] 
 liver.integrated@meta.data$Coarse_clusters <- liver.integrated@meta.data[[coarse_lvl]] 
 liver.integrated@meta.data$Fine_clusters <- liver.integrated@meta.data[[fine_lvl]]
-
-apcluster::heatmap(res1, -1*as.matrix(clust_dists))
+# Start with the Core clusters - Do demographic DE on them + Hepatocyte tranjectory
+# Subcluster the Core clusters - including all the genes.
+#apcluster::heatmap(res1, -1*as.matrix(clust_dists))
 
 png(paste(proj_name,"compare_clusterings_heatmap.png",sep="_"), width=6, height=6, units="in", res=300)
 lab <- matrix("", ncol=ncol(clust_table), nrow=ncol(clust_table))
-lab[colnames(clust_table)==fine_lvl, colnames(clust_table)==fine_lvl] <- "F"
-lab[colnames(clust_table)==coarse_lvl, colnames(clust_table)==coarse_lvl] <- "C"
+lab[colnames(clust_table)==fine_lvl, colnames(clust_table)==fine_lvl] <- "3"
+lab[colnames(clust_table)==coarse_lvl, colnames(clust_table)==coarse_lvl] <- "2"
+lab[colnames(clust_table)==core_lvl, colnames(clust_table)==core_lvl] <- "1"
 heatmap.2(as.matrix(clust_dists), trace="none", distfun=function(x){return(as.dist(clust_dists))}, cellnote=lab)
 dev.off()
 
@@ -80,20 +111,23 @@ dev.off()
 # Visualize the Chosen clusterings
 #nkNN <- 70
 
+png(paste(proj_name,"core_umap.png", sep="_"), width=6, height=6, units="in", res=150)
+DimPlot(liver.integrated, reduction = "umap", group.by="Core_clusters")
+dev.off()
 #liver.integrated <- RunTSNE(liver.integrated, reduction="harmony",  dims = 1:npcs)
 #liver.integrated <- RunUMAP(liver.integrated, reduction="harmony",  dims = 1:npcs, parallel=FALSE, n.neighbour=nkNN)
 png(paste(proj_name,"coarse_umap.png", sep="_"), width=6, height=6, units="in", res=150)
 DimPlot(liver.integrated, reduction = "umap", group.by="Coarse_clusters")
 dev.off()
-png(paste(proj_name,"coarse_tsne.png",sep="_"), width=6, height=6, units="in", res=150)
-DimPlot(liver.integrated, reduction = "tsne", group.by="Coarse_clusters")
-dev.off()
+#png(paste(proj_name,"coarse_tsne.png",sep="_"), width=6, height=6, units="in", res=150)
+#DimPlot(liver.integrated, reduction = "tsne", group.by="Coarse_clusters")
+#dev.off()
 png(paste(proj_name,"fine_umap.png", sep="_"), width=6, height=6, units="in", res=150)
 DimPlot(liver.integrated, reduction = "umap", group.by="Fine_clusters")
 dev.off()
-png(paste(proj_name,"fine_tsne.png", sep="_"), width=6, height=6, units="in", res=150)
-DimPlot(liver.integrated, reduction = "tsne", group.by="Fine_clusters")
-dev.off()
+#png(paste(proj_name,"fine_tsne.png", sep="_"), width=6, height=6, units="in", res=150)
+#DimPlot(liver.integrated, reduction = "tsne", group.by="Fine_clusters")
+#dev.off()
 
 saveRDS(liver.integrated, paste(proj_name, "harmony_plus_analysis.rds", sep="_"))
 #png("Coarse_harmony_clusters_by_donor.png", width=6, height=6, units="in", res=150)

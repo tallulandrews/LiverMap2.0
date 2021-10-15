@@ -25,7 +25,7 @@ bin_BMI <- function(weight_vec) {
 }
 
 get_metadata <- function(donor_vec) {
-	file <- "/cluster/home/tandrews/scripts/LiverMap2.0/LiverMap_SampleProcessingParams.csv";
+	file <- "/cluster/home/tandrews/scripts/LiverMap2.0/Metadata20LiverMapPlusParams.csv";
 	donor_vec <- gsub("_NPC", "-NPC", donor_vec)
 	metadata <- read.delim(file, header=T, sep=",", stringsAsFactors=FALSE)
 	if(sum(grepl("-", donor_vec)) > 0) {
@@ -39,6 +39,7 @@ get_metadata <- function(donor_vec) {
 	metadata$AGE <- factor(bin_age(metadata$age))
 	metadata$WEIGHT <- factor(bin_BMI(metadata$BMI))
 	metadata$SEX <- factor(metadata$sex)
+	rownames(metadata) <- donor_vec;
 	return(metadata)
 }
 

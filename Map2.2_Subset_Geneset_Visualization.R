@@ -1,9 +1,10 @@
 
+dir = "/cluster/projects/macparland/TA/LiverMap2.0/RawData/Analysis/EmptyDrops"
 #immune_genesets <- read.table("Immune_pathways_for_sex_differences.csv", sep=",", stringsAsFactors=F, header=TRUE)
 
 
 
-Spatial_Portal <- c("ALDOB", "APOA1", "FAMP1", "AGT", "FGB", "CYP2A7", "HAL", "FGA", "SDS")
+Spatial_Portal <- c("ALDOB", "APOA1", "HAMP1", "AGT", "FGB", "CYP2A7", "HAL", "FGA", "SDS")
 Spatial_Central <- c("CYP3A4", "CYP2E1", "CYP1A2", "ADH1B", "GLUL", "ADH4", "DCXR", "CES1")
 Spatial_RBC <- c("HBA2", "HBA1", "HBB", "HBD", "AHSP", "HBM", "CA1", "SLC44A1", "SLC25A37", "GYPC", "SAA1", "C1QB", "SAA2", "C1QA")
 Spatial_cluster12 <- c("CCDC152", "LRRC75A", "MAP3K12", "PHKG1", "ACTB", "ABI2", "AFMID", "GGCX", "MT1X", "TAT")
@@ -22,12 +23,16 @@ Map_Stellate <- c("DCN", "IGFBP7", "BGN", "QSOX1", "COL6A2", "COL6A1", "TAGLN", 
 Map_Bcell <- c("HLA-DRA", "CD52", "CD19A", "CD37", "HLA-DPB1", "HLA-DPA1", "HLA-DQB1", "CD19B", "CD74")
 Map_Eryth <- c("SNCA", "ALAS2", "AHSP", "CA1", "GYPA","HBD", "SLC4A1", "HBM", "EPB42", "HBA1", "HBA2")
 
+
 all_gene_lists <- list(Spatial_Portal=Spatial_Portal, Spatial_Central=Spatial_Central, Spatial_RBC=Spatial_RBC, Spatial_cluster12=Spatial_cluster12, Spatial_cluster9=Spatial_cluster9, Map_Portal=Map_Portal, Map_Central=Map_Central, Map_Tcell=Map_Tcell, Map_cvLSEC=Map_cvLSEC, Map_InfMac=Map_InfMac, Map_NonInfMac=Map_NonInfMac, Map_NK=Map_NK, Map_AntiB=Map_AntiB, Map_Chol=Map_Chol, Map_Stellate=Map_Stellate, Map_Bcell=Map_Bcell, Map_Eryth=Map_Eryth)
 
 obj <- readRDS("Merged_EmptyOnly_obj_Map2.2_ImportedClusters_ManualAnno.rds")
 obj_3pr <- obj[,obj@meta.data$assay_type == "3pr"]
 obj_5pr <- obj[,obj@meta.data$assay_type == "5pr"]
 
+Paul_collaborator <- c(rownames(obj)[grep("WNT", rownames(obj))], rownames(obj)[grep("HIF", rownames(obj))], rownames(obj)[grep("FZD", rownames(obj))])
+# Temporary!
+all_gene_lists=list(Paul_Custom_list=Paul_collaborator)
 
 for(i in 1:length(all_gene_lists)) {
 	require(Seurat)
@@ -35,10 +40,10 @@ for(i in 1:length(all_gene_lists)) {
 	this_name <- names(all_gene_lists)[i]
 	gene_set <- unlist(all_gene_lists[[i]])
 	png(paste(this_name, "3pr_geneset_dotplot.png", sep="_"), width=8, height=8, units="in", res=300)
-	print(DotPlot(obj_3pr, features=gene_set, group.by="Coarse_Manual_Anno") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+	print(DotPlot(obj_3pr, features=gene_set, group.by="Coarse_Manual_Anno") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)))
 	dev.off()
 	png(paste(this_name, "5pr_geneset_dotplot.png", sep="_"), width=8, height=8, units="in", res=300)
-	print(DotPlot(obj_5pr, features=gene_set, group.by="Coarse_Manual_Anno") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+	print(DotPlot(obj_5pr, features=gene_set, group.by="Coarse_Manual_Anno") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)))
 	dev.off()
 }
 
