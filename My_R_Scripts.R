@@ -1,3 +1,117 @@
+# Manual Wilcox DE test
+
+run_wilcox <- function(obj, binned, ident.1=min(binned), ident.2=NULL) {
+	if (!is.null(ident.2)) {
+		de_out <- t( apply(obj@assays$RNA@data, 1, function(x){my_wilcox(x[binned==ident.1], 
+													x[binned==ident.2])} ) )
+	} else {
+		de_out <- t( apply(obj@assays$RNA@data, 1, function(x){my_wilcox(x[binned==ident.1], 
+													x[binned!=ident.1])} ) )
+	}
+	colnames(de_out) <- c("log2fc", "mean.1", "mean.2", "pct.1", "pct.2", "AUC", "p.value")
+	de_out <- data.frame(de_out)
+	de_out$q.value <- p.adjust(de_out$p.value, method="fdr")
+	return(de_out)
+}
+
+
+
+my_wilcox <- function(x, y) {
+	res <- wilcox.test(x, y)
+	AUC <- res$statistic/(length(x)*length(y))
+	mu_x <- mean(x)
+	mu_y <- mean(y)
+	if (mu_x == 0) {
+		mu_x <- min(x[x>0])/(length(x)+1)
+	}
+	if (mu_y == 0) {
+		mu_y <- min(y[y>0])/(length(y)+1)
+	}
+	log2fc <- log2( (exp(mean(x))-1)/(exp(mean(y))-1) )
+	
+	pct.x <- sum(x>0)/length(x)
+	pct.y <- sum(y>0)/length(y)
+	
+	return( c(log2fc, mu_x, mu_y, pct.x, pct.y, AUC, res$p.value) )
+}
+
+# Wrapper for fgsea that incorporates some aspects of Cytoscape
+
+do_fgsea <- function(scored_genes, pathways=MSigAll, fdr=0.05, nmax=20, jaccard=0.25){
+	# scored_genes = named vector of scores, names = gene ID.
+	# pathways must be formated as read in by fgsea::gmtPathways
+	# fdr = multiple testing correction significance level
+	# nmax = maximum number of pathways to plot in the graph figure - equal number up/down
+	# jaccard = overlap theshold for linking two terms together in the gragh
+	set.seed(2910)
+	# Clean up scored genes
+	scored_genes[scored_genes > 0 & !is.finite(scored_genes)] <- max(scored_genes[is.finite(scored_genes)])+1
+	scored_genes[scored_genes < 0 & !is.finite(scored_genes)] <- min(scored_genes[is.finite(scored_genes)])-1
+
+	# Run fgsea
+	res <- fgseaMultilevel(pathways, scored_genes, minSize=15, maxSize=1000, nPermSimple=100000)
+
+	# Error catching: no significant enrichments
+	if (sum(!is.na(res$pval) & res$padj < fdr) == 0) {print("No significant enrichments"); return();}
+
+	# Cleaning up NAs
+	res <- res[!is.na(res$pval) & res$padj < fdr,]
+	res <- res[order(res$NES),]
+	res_full <- res;
+	if (nrow(res) > nmax*2) {
+		res_pos <- data.frame(res[unlist(res$NES) >0,])
+		res_neg <- data.frame(res[unlist(res$NES) <0,])
+		res_pos <- res_pos[order(abs(unlist(res_pos$NES)), decreasing=T),]
+		res_neg <- res_neg[order(abs(unlist(res_neg$NES)), decreasing=T),]
+		res <- rbind(res_pos[1:min(nrow(res_pos), nmax),], res_neg[1:min(nrow(res_neg), nmax),])
+		res <- res[order(res$NES),]
+		if (nrow(res_neg) == 0) {
+			res <- res_pos[1:min(nrow(res_pos), nmax),]
+			res <- res[order(res$NES),]
+		}
+		if (nrow(res_pos) == 0) {
+			res <- res_pos[1:min(nrow(res_neg), nmax),]
+			res <- res[order(res$NES),]			
+		}
+	}
+
+	size <- abs(res$NES)
+	colour <- sign(res$NES)
+	col_palette <- c("dodgerblue", "grey50", "firebrick")
+	gene_lists <- res[,"leadingEdge"]
+	if (! is.null(dim(gene_lists))) {
+		gene_lists_tmp <- list()
+		for (i in 1:nrow(gene_lists)) {
+			gene_lists_tmp[[i]] <- unlist(gene_lists[i,1])
+		}
+		gene_lists <- gene_lists_tmp;
+	}
+	sim_mat <- matrix(0, nrow=length(gene_lists), ncol=length(gene_lists))
+	trim <- c();
+	
+	for (i in 1:length(gene_lists)) {
+		for (j in i:length(gene_lists)) {
+			int <- length(intersect(unlist(gene_lists[[i]]), unlist(gene_lists[[j]])))
+			uni <- length(union(unlist(gene_lists[[i]]), unlist(gene_lists[[j]])))
+			sim_mat[i,j] <- int/uni
+			sim_mat[j,i] <- int/uni
+			if (int/uni > 0.8 & i != j) {
+				trim <- c(trim, j);
+			}
+		}
+	}
+	colnames(sim_mat) <- unlist(res[,1])
+	rownames(sim_mat) <- unlist(res[,1])
+
+	require(igraph)
+	G <- simplify(graph_from_adjacency_matrix(sim_mat > jaccard, mode="undirected"))
+	plot(G, vertex.color=col_palette[colour+2], vertex.size=size*5, edge.width=2)
+	res$cluster <- components(G)$membership
+	return(list(rich=res_full, graph=G, vertex_col = col_palette[colour+2], vertex_size = size*5))
+}
+
+
+
 # These are all tested and debugged.
 
 # Wrapper for rowMeans to ensure using a version appropriate
