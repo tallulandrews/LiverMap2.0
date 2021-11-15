@@ -27,10 +27,13 @@ my_wilcox <- function(x, y) {
 	if (mu_y == 0) {
 		mu_y <- min(y[y>0])/(length(y)+1)
 	}
-	log2fc <- log2( (exp(mean(x))-1)/(exp(mean(y))-1) )
+	log2fc <- log2( (exp(mean(x))-0.99)/(exp(mean(y))-0.99) )
 	
 	pct.x <- sum(x>0)/length(x)
 	pct.y <- sum(y>0)/length(y)
+	mu_x[pct.x == 0] <- 0
+	mu_y[pct.y == 0] <- 0
+	log2fc[mu_x == 0] <- 0
 	
 	return( c(log2fc, mu_x, mu_y, pct.x, pct.y, AUC, res$p.value) )
 }
@@ -49,7 +52,7 @@ do_fgsea <- function(scored_genes, pathways=MSigAll, fdr=0.05, nmax=20, jaccard=
 	scored_genes[scored_genes < 0 & !is.finite(scored_genes)] <- min(scored_genes[is.finite(scored_genes)])-1
 
 	# Run fgsea
-	res <- fgseaMultilevel(pathways, scored_genes, minSize=15, maxSize=1000, nPermSimple=100000)
+	res <- fgsea(pathways, scored_genes, minSize=15, maxSize=1000, nperm=100000)
 
 	# Error catching: no significant enrichments
 	if (sum(!is.na(res$pval) & res$padj < fdr) == 0) {print("No significant enrichments"); return();}
