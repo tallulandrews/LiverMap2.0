@@ -73,7 +73,7 @@ option_list <- list(
         metavar="false discovery rate"),
     make_option(c("--trim"), default=10,
         help="threshold below which droplets are ignored completely [default %default]",
-        metavar="false discovery rate"),
+        metavar="number"),
     make_option(c("--mt"), default=50,
         help="threshold for mitochondrial expression percentage [default %default]",
         metavar="number"),
@@ -94,7 +94,11 @@ OPTS <- parse_args(OptionParser(option_list=option_list))
 print(OPTS)
 
 
-rawdata <- Read10X(data.dir = OPTS$input_dir)
+if (grepl("h5$", OPTS$input_dir)) {
+	rawdata <- Seurat::Read10X_h5(OPTS$input_dir)
+} else {
+	rawdata <- Read10X(data.dir = OPTS$input_dir)
+}
 # Remove rows & columns that are completely zero
 rawdata <- rawdata[,Matrix::colSums(rawdata) > OPTS$trim]
 rawdata <- rawdata[Matrix::rowSums(rawdata) > 0,]
@@ -121,7 +125,7 @@ slope <- diff(log(n_umi_sorted))/diff(log(rank_sorted))
 spar = 0.5
 inflection = OPTS$min_cells
 while(inflection == OPTS$min_cells) { 
-	smooth_slope <- smooth.spline(slope, spar=spar) # changed to 0.4 from 0.5 on 19Aug202
+	smooth_slope <- smooth.spline(slope, spar=spar) # changed to 0.4 from 0.5 on 19Aug2020
 	inflection <- which(smooth_slope$y == min(smooth_slope$y[OPTS$min_cells:OPTS$max_cells]))
 	spar=spar*0.8
 }
@@ -247,6 +251,8 @@ myseur@meta.data$cell_ID <- paste(myseur@meta.data$donor, myseur@meta.data$cell_
 orig.meta.data <- myseur@meta.data;
 }
 ###### End if init seurat doesn't exist
+
+
 
 
 print("Seurat Pipeline")
