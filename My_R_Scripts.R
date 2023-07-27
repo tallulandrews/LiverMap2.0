@@ -1,3 +1,41 @@
+# Simpson Index for Integration
+simpson_index <- function(samples, clusters) {
+	tab <- table(samples, clusters);
+	tab <- t(t(tab)/colSums(tab))
+	return(colSums(tab^2))
+}
+
+simpson_index_optimal <- function(samples) {
+	tab <- table(samples)
+	tab <- tab/sum(tab)
+	return(sum(tab^2))
+}
+
+simpson_plot <- function(object, samples, clusters, verbose=FALSE, sample.colours=NULL) {
+	if (length(samples) == 1) {
+		if (verbose) {print("Collected samples from metadata.")}
+		samples <- object@meta.data[,samples]
+	}
+	if (length(clusters) == 1) {
+		if (verbose) {print("Collected clusters from metadata.")}
+		clusters <- object@meta.data[,clusters]
+	}
+	toplot <- table(samples, clusters)
+
+	if (is.null(sample.colours)) {
+		sample.colours <- RColorBrewer::brewer.pal(nrow(toplot))
+	}
+	simpson.cluster <- round(simpson_index(samples, clusters), digits=2)
+	simpson.optimal <- round(simpson_index_optimal(samples), digits=2)
+	b_loc <- barplot(toplot/ncol(object), col=sample.colours)
+	text(x=b_loc, y=colSums(toplot/ncol(object)), labels=simpson, pos=3)
+	legend("topright", c(
+		paste("Exp. Simpson =", simpson.optimal, digits=2),
+		paste("Avg. Simpson =", round(mean(simpson), digits=2)),
+		paste("Max. Simpson =", max(simpson))
+	), bty="n")
+}
+
 # Manual Wilcox DE test
 
 run_wilcox <- function(obj, binned, ident.1=min(binned), ident.2=NULL) {
@@ -228,12 +266,12 @@ get_rel_expression <- function(mat, clusters, donors, weight=TRUE) {
 
 # Table of total expression of cells from each donor in each cluster 
 #  - for edgeR
-get_pseudobulk <- function(mat, clusters, donors) {
+get_pseudobulk <- function(mat, clusters, donors, method=c("sum", "mean")) {
         c <- split(seq(ncol(mat)), clusters);
         donor_freqs <- table(donors)/length(donors)
         # avg expression per donor in this cluster
         clust_expr <- lapply(c, function(clust) {
-                d_expr <- group_rowmeans(mat[,clust], donors[clust], type="sum");
+                d_expr <- group_rowmeans(mat[,clust], donors[clust], type=method[1]);
 		if(is.null(dim(d_expr))) {
 			l <- sapply(d_expr, length)
 			keep <- which(l == nrow(mat))
