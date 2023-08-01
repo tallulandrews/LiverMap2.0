@@ -23,16 +23,16 @@ simpson_plot <- function(object, samples, clusters, verbose=FALSE, sample.colour
 	toplot <- table(samples, clusters)
 
 	if (is.null(sample.colours)) {
-		sample.colours <- RColorBrewer::brewer.pal(nrow(toplot))
+		sample.colours <- RColorBrewer::brewer.pal(nrow(toplot), "Set3")
 	}
 	simpson.cluster <- round(simpson_index(samples, clusters), digits=2)
 	simpson.optimal <- round(simpson_index_optimal(samples), digits=2)
 	b_loc <- barplot(toplot/ncol(object), col=sample.colours)
-	text(x=b_loc, y=colSums(toplot/ncol(object)), labels=simpson, pos=3)
+	text(x=b_loc, y=colSums(toplot/ncol(object)), labels=simpson.cluster, pos=3)
 	legend("topright", c(
 		paste("Exp. Simpson =", simpson.optimal, digits=2),
-		paste("Avg. Simpson =", round(mean(simpson), digits=2)),
-		paste("Max. Simpson =", max(simpson))
+		paste("Avg. Simpson =", round(mean(simpson.cluster), digits=2)),
+		paste("Max. Simpson =", max(simpson.cluster))
 	), bty="n")
 }
 
