@@ -46,14 +46,14 @@ Cell_type_colours <- rbind(
 	c("Eryth", "#8B0000"), #darkred
 	c("Hepatocyte", "#e41a1c"), #bright red
 	c("OtherHep", "#e41a1c"), #bright red
-	c("PortalHep", "#084081"),
-	c("interHep", "#0868ac"),
-	c("CentralHep", "#2b8cbe"),
+	c("PortalHep", "#08306b"),
+	c("interHep", "#08306b"),
+	c("CentralHep", "#6baed6"),
 	c("Stellate", "#fec44f"),
-	c("Cholangiocyte", "#ec7014"),
+	c("Cholangiocyte", "#d94801"),
 	c("Portalendo", "#993494"),
 	c("Macrophage", "#377eb8"), # bright blue
-	c("NonInfMac", "#377eb8"),
+	c("NonInfMac", "#2171b5"),
 	c("InfMac", "#41b6c4"),
 	c("Tcell", "#4daf4a"), #green
 	c("gdTcells1", "#41ae76"),
@@ -64,7 +64,7 @@ Cell_type_colours <- rbind(
         c("MatBcell", "#6a51a3"), #violet
 	c("NKcells", "#a65628"),
 	c("LSECs", "#ffff33"),
-	c("cvLSECs", "#ff7f00"),
+	c("cvLSECs", "#fd8d3c"),
 	c("PortalLSECs", "#4d004b")
 )
 
@@ -194,11 +194,13 @@ Type_DimPlot <- function(myseur, type_col="consistent_labs", reduction="umap", c
 	require(ggplot2)
 	agg_coord_by_cluster <- function(coords, clusters) {
 		x <- split(seq(nrow(coords)), clusters)
-		result <- sapply(x, function(a) apply(coords[a,],2,median))
-		return(result)
+		xes <- sapply(x, function(a){median(coords[a,1])})
+		yes <- sapply(x, function(a){median(coords[a,2])})
+		return(rbind(xes, yes))
 	}
 
-	umap_lab_pos <- agg_coord_by_cluster(Reductions(myseur, reduction)@cell.embeddings, myseur@meta.data[,cluster_col])
+	#umap_lab_pos <- agg_coord_by_cluster(Reductions(myseur, reduction)@cell.embeddings, myseur@meta.data[,cluster_col])
+	umap_lab_pos <- agg_coord_by_cluster(myseur@reductions[[reduction]]@cell.embeddings, myseur@meta.data[,cluster_col])
 
 	# UMAP + Ref scmap anno
 	new_colour_scheme <- Cell_type_colours[order(Cell_type_colours[,1]),]
