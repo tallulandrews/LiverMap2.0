@@ -22,7 +22,7 @@ simpson_by_cluster <- apply(freq_by_sample, 1, simpson_index)
 null <- simpson_index(table(metaData$sample));
 
 #pdf("Figure2_Simpson_by_cluster.pdf", width=5, height=5)
-png("Figure2_Simpson_by_cluster.png", width=5, height=5, unit="in", res=300)
+png("Figure2_Simpson_by_cluster.png", width=4, height=4, unit="in", res=300)
 par(mar=c(4,3,1,1))
 barplot(simpson_by_cluster, col=cluster_2_colour, horiz=2, las=1, xlab="Simpson Index (Probabiliity)")
 abline(v=null, lty=2)
@@ -40,8 +40,17 @@ reorder <- rev(order(bxp$stats[3,]))
 typefreq_by_sample <- typefreq_by_sample[,reorder]
 overall_freq <- table(metaData$Coarse_Manual_Anno)[reorder]/nrow(metaData)
 
+#Change cell-type labelling
+type_names_tmp <- colnames(typefreq_by_sample)
+type_names_tmp[4] <- "Monocyte-like"
+type_names_tmp[5] <- "Kupffer"
+colnames(typefreq_by_sample) <- type_names_tmp
+Cell_type_colours <-rbind(Cell_type_colours, c("Kupffer", "#2171b5"))
+Cell_type_colours <-rbind(Cell_type_colours, c("Monocyte-like", "#41b6c4"))
+
+
 #pdf("Figure2_Freq_by_Sample_boxplot.pdf", width=10, height=6)
-png("Figure2_Freq_by_Sample_boxplot.png", width=10, height=6.5, units="in", res=300)
+png("Figure2_Freq_by_Sample_boxplot_renamed.png", width=10*0.75, height=6.5*0.75, units="in", res=300)
 par(mar=c(10,4,1,1))
 bxp <- boxplot(as.vector(typefreq_by_sample)~factor(rep(colnames(typefreq_by_sample), each=nrow(typefreq_by_sample)), levels=colnames(typefreq_by_sample)), 
 	names=paste(colnames(typefreq_by_sample), " (", round(overall_freq*100, digits=1),"%) ", sep=""), 
@@ -49,7 +58,7 @@ bxp <- boxplot(as.vector(typefreq_by_sample)~factor(rep(colnames(typefreq_by_sam
 	xlab="", ylab="Frequency (%)", outline=F, ylim=c(0,80))
 points(jitter(rep(1:15, each=34)), as.vector(typefreq_by_sample), pch=16)
 points(1:15, overall_freq*100, pch=23, bg="goldenrod1", cex=1.5)
-legend("topright", "Full Map", bty="n", pch=23, cex=1.5, pt.bg="goldenrod1")
+legend("topright", "Full Map", bty="n", pch=23, pt.bg="goldenrod1")
 dev.off()
 
 # Test Significance of Change of Proportion! - exclude Eryth for this analysis
@@ -94,7 +103,7 @@ is.diff <- cbind(is.diff, rep(0, nrow(is.diff)));
 pt_col <- rep(rgb(0.4,0.4,0.4,0.6), length(as.vector(typefreq_by_sample)));
 pt_col[as.vector(is.diff) != 0] <- rgb(0,0,0);
 
-png("Figure2_Freq_by_Sample_boxplot_transparent.png", width=10, height=6.5, units="in", res=300)
+png("Figure2_Freq_by_Sample_boxplot_transparent_renamed.png", width=10*0.75, height=6.5*0.75, units="in", res=300)
 par(mar=c(10,4,1,1))
 bxp <- boxplot(as.vector(typefreq_by_sample)~factor(rep(colnames(typefreq_by_sample), each=nrow(typefreq_by_sample)), levels=colnames(typefreq_by_sample)), 
 	names=paste(colnames(typefreq_by_sample), " (", round(overall_freq*100, digits=1),"%) ", sep=""), 
@@ -102,8 +111,25 @@ bxp <- boxplot(as.vector(typefreq_by_sample)~factor(rep(colnames(typefreq_by_sam
 	xlab="", ylab="Frequency (%)", outline=F, ylim=c(0,80))
 points(jitter(rep(1:15, each=34)), as.vector(typefreq_by_sample), pch=16, col=pt_col)
 points(1:15, overall_freq*100, pch=23, bg="goldenrod1", cex=1.5)
-legend("topright", c("Full Map", "Differ (q < 0.05)"), bty="n", pch=c(23, 16), cex=1.5, pt.bg=c("goldenrod1", "black"))
+legend("topright", c("Full Map", "Differ (q < 0.05)"), bty="n", pch=c(23, 16), pt.bg=c("goldenrod1", "black"))
 dev.off()
+
+# Test for cell-type frequency being associated with donor-characteristics.
+
+sample_2_age <- table(metaData$sample, metaData$donor_age)
+sample_2_age <- as.numeric(apply(sample_2_age, 1, function(x){colnames(sample_2_age)[ which(x == max(x))[1] ]}))
+sample_2_sex <- table(metaData$sample, metaData$donor_sex)
+sample_2_sex <- apply(sample_2_sex, 1, function(x){colnames(sample_2_sex)[ which(x == max(x))[1] ]})
+
+sex_ps <- c();
+age_ps <- c();
+
+for (type_i in 1:ncol(typefreq_by_sample)) {
+	res <- glm(typefreq_by_sample[,type_i] ~ sample_2_sex)
+	sex_ps <- c(sex_ps, summary(res)$coef[2,4])
+	res <- glm(typefreq_by_sample[,type_i] ~ sample_2_age)
+	age_ps <- c(age_ps, summary(res)$coef[2,4])
+}
 
 
 # Sample-sample similarity by cluster

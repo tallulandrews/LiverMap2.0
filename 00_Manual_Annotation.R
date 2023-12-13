@@ -23,13 +23,13 @@ clusters <- obj@meta.data[,args[2]]
 # For subsetting & specific analyses.
 autoanno <- obj@meta.data[,args[3]]
 
-prefix <- obj@meta.data[,args[4]]
+prefix <- args[4]
 
 coarse_anno <- as.character(autoanno)
-coarse_anno[grep("Tcell", coarse_anno)] <- "Lympho"
-coarse_anno[grep("NKcell", coarse_anno)] <- "Lympho"
-coarse_anno[grep("Bcell", coarse_anno)] <- "Lympho"
 coarse_anno[grep("Hep", coarse_anno)] <- "Hep"
+coarse_anno[grep("NK*cell", coarse_anno)] <- "Lympho"
+coarse_anno[grep("T*cell", coarse_anno)] <- "Lympho"
+coarse_anno[grep("B*cell", coarse_anno)] <- "Lympho"
 
 tab <- table(clusters, coarse_anno); tab <- tab/rowSums(tab);
 Lympho_clusters <- rownames(tab)[tab[,"Lympho"] > 0.5]
@@ -53,30 +53,31 @@ scale_cluster_means <- group_rowmeans(obj@assays[[1]]@scale.data, clusters)
 zheng_immune_markers <- rbind(
 		c("CD3D", "Tcells"),
 		c("CD8A", "cytotoxic-T"),
+		c("CD8B", ""),
 		c("NKG7", "NKcells"),
+		c("CD56", "NKcells"),
+		c("GNLY", "NKcells"),
 		c("FCER1A", "dendritic"),
 		c("CLEC9A", "dendritic"),
+		c("CLEC4C", ""),
 		c("CD16", "CD16monocyte"),
 		c("S100A8", "myeloid"),
 		c("S100A9", "myeloid"),
 		c("CD79A", "Bcells"),
+		c("CD19", "Bcells"),
 		c("CCR10", "Tmem"),
 		c("TNFRSF18", "Treg"),
+		c("CD25", "Treg"),
 		c("ID3", "naive"),
 		c("PF4", "megakaryocyte"),
-		c("CLEC4C", ""),
 		c("PTCRA", ""),
-		c("CD8B", ""),
-		c("CD56", "NKcells"),
 		c("CD45", ""),
 		c("CD45RA", ""),
 		c("CD45RO", ""),
-		c("CD25", "Treg"),
-		c("CD19", "Bcells"),
 		c("LGALS3", ""),
 		c("SIGLEC7", ""),
-		c("GZMK", ""),
-		c("GNLY", "NKcells"))
+		c("GZMK", "")
+		)
 
 Immune_Profiles <- readRDS("/cluster/projects/macparland/TA/ExternalData/Zheng_Immune/Zheng_profiles.rds");
 
@@ -141,9 +142,9 @@ Hepatocyte_spatial_profiles <- readRDS("/cluster/projects/macparland/TA/External
 ####### Halpern Done
 
 # Read in Marker Gene Tables
-immune <- read.table("/cluster/projects/macparland/TA/ExternalData/My_Markers/Immune_markers.csv", sep =",")
-liver <- read.table("/cluster/projects/macparland/TA/ExternalData/My_Markers/Liver_markers.csv", sep=",")
-soupX <- read.table("/cluster/projects/macparland/TA/ExternalData/My_Markers/SoupXGenesets_markers.csv", sep=",")
+immune <- read.table("/cluster/projects/macparland/TA/ExternalData/My_Markers/Immune_markers.csv", sep =",", header=T)
+liver <- read.table("/cluster/projects/macparland/TA/ExternalData/My_Markers/Liver_markers.csv", sep=",", header=T)
+soupX <- read.table("/cluster/projects/macparland/TA/ExternalData/My_Markers/SoupXGenesets_markers.csv", sep=",", header=T)
 
 
 # Read in Map 1 marker genes
@@ -225,69 +226,39 @@ zheng_unique_ness[is.na(zheng_unique_ness)] <- 0
 tmp <- unlist(apply(Immune_Profiles$profiles[zheng_unique_ness>0.5,], 1, function(x){if (max(x) > 1) {which(x==max(x))} else{return(0)}}))
 
 zheng_empiric_markers <- rbind(
-		c("MZT2A","t_memory"),
-		c("IL7A","t_memory"),
-		c("HINT1","t_memory"),
-		c("NDUFB9","t_memory"),
-		c("CORO1B","t_memory"),
-		c("TRADD","t_memory"),
-		c("MIF","t_memory"),
-		c("CD8C","t_cyto_naive"),
-		c("SNHG8","t_cyto_naive"),
-		c("HSPB1","t_cyto_naive"),
-		c("FBL","t_cyto_naive"),
-		c("S100B","t_cyto_naive"),
-		c("SELL","t_naive"),
-		c("MAL","t_naive"),
-		c("LEF1","t_naive"),
-		c("CCR7","t_naive"),
-		c("CALM3","t_naive"),
-		c("PIK3IP1","t_naive"),
-		c("PBXIP1","t_reg"),
-		c("AQP3","t_reg"),
-		c("CD44","t_reg"),
-		c("UCP2","t_reg"),
-		c("IL10RA","t_reg"),
-		c("S1PR4","t_reg"),
-		c("GIMAP5","t_helper"),
-		c("CMPK1","t_helper"),
-		c("SSR2","t_helper"),
-		c("EIF3F","t_helper"),
-		c("EEF2","t_helper"),
-		c("CD3G","t_cyto"),
-		c("DUSP2","t_cyto"),
-		c("CXCR4","t_cyto"),
-		c("CD79B","bcells"),
-		c("CD79A","bcells"),
-		c("BANK1","bcells"),
-		c("BLK","bcells"),
-		c("SPIB","bcells"),
-		c("VPREB3","bcells"),
-		c("FCER2","bcells"),
-		c("TCL1A","bcells"),
-		c("FCGR3A","nkcells"),
-		c("XCL2","nkcells"),
-		c("SPON2","nkcells"),
-		c("FGFBP2","nkcells"),
-		c("CLIC3","nkcells"),
-		c("PRF1","nkcells"),
-		c("GZMB","nkcells"),
-		c("CCL4","nkcells"),
-		c("S100A9","monocyte"),
-		c("S100A8","monocyte"),
-		c("MNDA","monocyte"),
-		c("CD14","monocyte"),
-		c("LST1","monocyte"),
-		c("CPVL","monocyte"),
-		c("CFP","monocyte"),
-		c("FCN1","monocyte"),
-		c("LYZ","monocyte"),
-		c("SERPINA1","monocyte"),
-		c("CD68","monocyte"),
-		c("LGALS2","monocyte"),
-		c("TYMP","monocyte"),
-		c("CST3","monocyte")
+		c("MZT2A","t_memory"), c("IL7A","t_memory"),
+		c("HINT1","t_memory"), c("NDUFB9","t_memory"),
+		c("CORO1B","t_memory"),	c("TRADD","t_memory"),
+		c("MIF","t_memory"), c("CD8C","t_cyto_naive"),
+		c("SNHG8","t_cyto_naive"), c("HSPB1","t_cyto_naive"),
+		c("FBL","t_cyto_naive"), c("S100B","t_cyto_naive"),
+		c("SELL","t_naive"), c("MAL","t_naive"),
+		c("LEF1","t_naive"), c("CCR7","t_naive"),
+		c("CALM3","t_naive"), c("PIK3IP1","t_naive"),
+		c("PBXIP1","t_reg"), c("AQP3","t_reg"),
+		c("CD44","t_reg"), c("UCP2","t_reg"),
+		c("IL10RA","t_reg"), c("S1PR4","t_reg"),
+		c("GIMAP5","t_helper"), c("CMPK1","t_helper"),
+		c("SSR2","t_helper"), c("EIF3F","t_helper"),
+		c("EEF2","t_helper"), c("CD3G","t_cyto"),
+		c("DUSP2","t_cyto"), c("CXCR4","t_cyto"),
+		c("CD79B","bcells"), c("CD79A","bcells"),
+		c("BANK1","bcells"), c("BLK","bcells"),
+		c("SPIB","bcells"), c("VPREB3","bcells"),
+		c("FCER2","bcells"), c("TCL1A","bcells"),
+		c("FCGR3A","nkcells"), c("XCL2","nkcells"),
+		c("SPON2","nkcells"), c("FGFBP2","nkcells"),
+		c("CLIC3","nkcells"), c("PRF1","nkcells"),
+		c("GZMB","nkcells"), c("CCL4","nkcells"),
+		c("S100A9","monocyte"), c("S100A8","monocyte"),
+		c("MNDA","monocyte"), c("CD14","monocyte"),
+		c("LST1","monocyte"), c("CPVL","monocyte"),
+		c("CFP","monocyte"), c("FCN1","monocyte"),
+		c("LYZ","monocyte"), c("SERPINA1","monocyte"),
+		c("CD68","monocyte"), c("LGALS2","monocyte"),
+		c("TYMP","monocyte"), c("CST3","monocyte")
 		)
+
 if (length(Lympho_clusters) > 1) {
 	synced <- sync_profiles(scale_cluster_means[,Lympho_clusters], immune_ref)
 	require(proxy)
@@ -316,8 +287,12 @@ colnames(immune_scmap) <- tmp;
 
 immune_cells <- obj[,clusters %in% Lympho_clusters]
 immune_cells_sce <- as.SingleCellExperiment(immune_cells)
+immune_cells_sce <- immune_cells_sce[rownames(immune_cells_sce) %in% rownames(immune_cells@assays[[1]]@scale.data),]
+
+immune_cells_sce <- immune_cells_sce[match(rownames(immune_cells@assays[[1]]@scale.data), rownames(immune_cells_sce)),]
+
 assays(immune_cells_sce)[["logcounts"]] <- immune_cells@assays[[1]]@scale.data;
-rowData(immune_cells_sce)$feature_symbol <- rownames(immune_cells);
+rowData(immune_cells_sce)$feature_symbol <- rownames(immune_cells@assays[[1]]@scale.data);
 
 cell_level <- scmapCluster(projection=immune_cells_sce, index_list = list(zheng=immune_scmap), threshold=0.1)
 
@@ -338,14 +313,46 @@ dev.off()
 zheng_immune_markers=zheng_immune_markers[zheng_immune_markers[,1] %in% rownames(obj),]
 zheng_empiric_markers=zheng_empiric_markers[zheng_empiric_markers[,1] %in% rownames(obj),]
 
-png(paste(prefix, "zheng_markers.png"), width=8, height=8, units="in", res=300)
-Seurat::DotPlot(obj, features=zheng_immune_markers[,1], group.by="knn_50_res_1.8")
+png(paste(prefix, "zheng_markers.png", sep="_"), width=8, height=8, units="in", res=300)
+Seurat::DotPlot(obj, features=zheng_immune_markers[,1], group.by=args[2])
 dev.off()
-png(paste(prefix, "zheng_emp_markers.png"), width=8, height=8, units="in", res=300)
-Seurat::DotPlot(obj,features=zheng_empiric_markers[,1], group.by="knn_50_res_1.8")
+png(paste(prefix, "zheng_emp_markers.png", sep="_") width=8, height=8, units="in", res=300)
+Seurat::DotPlot(obj,features=zheng_empiric_markers[,1], group.by=args[2])
 dev.off()
 
+# Key Markers
+# From Spatial - Central vs Portal Hepatocytes
+Central <- c("CYP1A2", "CYP2E1", "CYP3A4", "GLUL", "DCXR", "FTL", "GPX2", "GSTA1")
+Portal <- c("CYP2A7", "FABP1", "HAL", "AGT", "ALDOB", "SDS")
+# Cross reference Map1 with marker tables
+Stellate <- c("ACTA2", "COL1A1", "RBP1", "TAGLN", "ADAMTSL2", "GEM", "LOXL1", "LUM")
+pLSEC <- c("GJA5", "SPARCL1", "CLEC14A", "PLVAP", "EGR3")
+cvLSEC <- c("FCN2", "CLEC1B", "CLEC4G", "PVALB", "S100A13")
+Eryth <- c("HBB", "HBA1", "HBA2")
+AntiBcell <- c("IGKC", "JCHAIN", "IGHA1", "IGLC1", "IGLC2", "IGLC3")
+Bcell <- c("CD22", "CD37", "CD79B", "FCRL1", "LTB", "DERL3", "IGHG4")
+NonInfMac <- c("VCAM1", "TTYH3", "TIMD4", "SLC40A1", "RAB31", "MARCO", "HMOX1", "C1QC")
+InfMac <- c("VCAN", "S100A8", "MNDA", "LYZ", "FCN1", "CXCL8")
+CD3abTcell <- c("CD8A", "CD8B", "CD3D", "CD3G", "TRAC", "IL32", "TRBC1", "TRBC2")
+gdTcell <- c("CSTW", "IL7R", "GZMB", "GZMH", "TBX21", "HOPX", "PRF1", "S100B", "TRDC", "TRGC1", "TRGC2")
+NKcell <- c("NCR1", "NCR2", "NCR3", "NKG7")
+endo <- c("VWF", "RAMP3", "LIFR", "MYL9", "ACTA2", "CLDN4", "ANXA4", "COL1A2")
 
+
+best_markers <- as.character(Central, Portal, Stellate, pLSEC, cvLSEC, endo, Eryth, AntiBcell, Bcell, NonInfMac, InfMac, CD3abTcell, gdTcell, NKcell)
+immune_phenotype <- c(soupX[,2],"TNF", "JCHAIN", "IGKV1-12", "IGKV4-1", "IGLV3-1", "IGLV6-57", "IGLL5", "IGLC7", rownames(obj)[grep("CXC",rownames(obj))], rownames(obj)[grep("^IL",rownames(obj))], rownames(obj)[grep("^HLA",rownames(obj))])
+
+
+png(paste(prefix, "SoupX_markers.png", sep="_"), width=8, height=8, units="in", res=300)
+Seurat::DotPlot(obj, features=soupX[,2], group.by=args[2])
+dev.off()
+png(paste(prefix, "Immune_pheno.png", sep="_"), width=8, height=8, units="in", res=300)
+Seurat::DotPlot(immune_cells, features=immune_pheontype, group.by=args[2])
+dev.off()
+
+png(paste(prefix, "best_markers.png", sep="_"), width=8, height=8, units="in", res=300)
+Seurat::DotPlot(obj, features=best_markers, group.by=args[2])
+dev.off()
 ### General Marker Genes.
 
 

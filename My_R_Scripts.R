@@ -30,9 +30,9 @@ simpson_plot <- function(object, samples, clusters, verbose=FALSE, sample.colour
 	b_loc <- barplot(toplot/ncol(object), col=sample.colours)
 	text(x=b_loc, y=colSums(toplot/ncol(object)), labels=simpson.cluster, pos=3)
 	legend("topright", c(
-		paste("Exp. Simpson =", simpson.optimal, digits=2),
+		paste("Exp. Simpson =", simpson.optimal),
 		paste("Avg. Simpson =", round(mean(simpson.cluster), digits=2)),
-		paste("Max. Simpson =", max(simpson.cluster))
+		paste("Max. Simpson =", round(max(simpson.cluster), digits=2))
 	), bty="n")
 }
 

@@ -114,6 +114,7 @@ map_cell_types <- function(types) {
 		"Hep", "Hepatocyte",
 		"inflamatoryMacrophages", "InfMac",
 		"InflamatoryMacrophages", "InfMac",
+		"Monocyte-like", "InfMac",
 		"InflammatoryMacrophages", "InfMac",
 		"inflammatoryMacrophages", "InfMac",
 		"InfMac", "InfMac",
@@ -136,6 +137,7 @@ map_cell_types <- function(types) {
 		"NonInflMac1", "NonInfMac",
 		"NonInflMac22", "NonInfMac",
 		"NonInfMac", "NonInfMac",
+		"Kupffer", "NonInfMac",
 		"PericentralHep", "CentralHep",
 		"CentralHep", "CentralHep",
 		"CentralHep1", "CentralHep",
@@ -208,4 +210,9 @@ Type_DimPlot <- function(myseur, type_col="consistent_labs", reduction="umap", c
 	new_colour_scheme <- new_colour_scheme[new_colour_scheme[,1] %in% myseur@meta.data[,type_col],]
 
 	DimPlot(myseur, reduction=reduction, group.by=type_col, pt.size=.1)+scale_color_manual(values=new_colour_scheme[,2])+annotate("text", x=umap_lab_pos[1,], y=umap_lab_pos[2,], label=colnames(umap_lab_pos), colour="grey35")
+}
+
+convert_using_list <- function(vector_to_convert, conversion_list) {
+       coverted <- sapply(vector_to_convert, function(x){conversion_list[[x]]})
+       return(coverted)
 }
