@@ -24,8 +24,10 @@ https://macparlandlab.shinyapps.io/endothelial/
 https://macparlandlab.shinyapps.io/cholangiocytes/
 https://macparlandlab.shinyapps.io/b_cells/
 https://macparlandlab.shinyapps.io/stellate/
+
 Spatial Healthy: 
 https://macparlandlab.shinyapps.io/healthylivermapspatialgui/
+
 Spatial PSC:
 https://macparlandlab.shinyapps.io/shinypsc_spatialappgui/
 
